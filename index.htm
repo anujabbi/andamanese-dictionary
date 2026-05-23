@@ -1,7 +1,56 @@
-﻿<html>
-<script language="JavaScript" type="text/javascript">
-<!--
-location.href = 'lexicon/index.htm';
-// -->
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Great Andamanese — Dictionary</title>
+  <link rel="stylesheet" href="assets/home.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <a class="about-link" href="about.htm">About</a>
+  </header>
+
+  <main class="hero">
+    <h1 class="brand">Great Andamanese</h1>
+    <p class="tagline">A trilingual record of an endangered language</p>
+
+    <form class="search-form" role="search" action="lexicon/index.htm">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Search a word in English or IPA…"
+          aria-label="Search the dictionary"
+        />
+        <div id="dropdown" class="dropdown" hidden></div>
+      </div>
+    </form>
+
+    <nav class="browse" aria-label="Browse the dictionary">
+      <a href="lexicon/index.htm">Lexicon</a>
+      <span class="sep">·</span>
+      <a href="index-ga_in_sript/index.htm">Devanagari index</a>
+      <span class="sep">·</span>
+      <a href="index-english/index.htm">English index</a>
+      <span class="sep">·</span>
+      <a href="index-hindi/index.htm">Hindi index</a>
+      <span class="sep">·</span>
+      <a href="categories/index.htm">Categories</a>
+    </nav>
+
+    <section id="wotd" class="wotd" hidden aria-label="Word of the day">
+      <!-- populated by home.js -->
+    </section>
+  </main>
+
+  <script src="assets/home.js" defer></script>
+</body>
 </html>

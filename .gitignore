@@ -10,3 +10,6 @@ Desktop.ini
 *.swp
 .vscode/
 .idea/
+
+# Brainstorm visual companion scratch (skill writes here; not project content)
+.superpowers/
