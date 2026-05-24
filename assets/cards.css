@@ -1,0 +1,328 @@
+/* assets/cards.css — card-style rendering of dictionary entries.
+   Loaded alongside (after) stylesheets/lexiquepro.css. Targets the new
+   .entry/.cards-page class structure produced by cards.js — it does not
+   touch the legacy .lp* paragraph rules, so when JS fails to run the page
+   falls back gracefully to the paragraph view styled by lexiquepro.css. */
+
+/* Tokens — redeclared so cards.css is independent of stylesheet load order */
+:root {
+  --paper:        #fbf6ec;
+  --paper-2:      #f5ecd9;
+  --ink:          #2a1f15;
+  --ink-soft:     #5e4a36;
+  --ink-mute:     #8a7c66;
+  --rule:         #e6dcc4;
+  --accent:       #8a5a2b;
+  --accent-soft:  #c9a36a;
+  --hi:           #fff2cf;
+  --serif: Georgia, "Times New Roman", serif;
+  --sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.cards-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+/* Standalone-context top bar */
+.cards-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 18px;
+  font-family: var(--serif);
+  font-size: 15px;
+}
+.cards-topbar a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.cards-topbar a:hover { text-decoration: underline; }
+
+/* Card */
+.entry {
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+}
+.entry.fragment {
+  background: var(--hi);
+  border-color: var(--accent-soft);
+}
+.entry .body { min-width: 0; }
+.entry .head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.entry .ipa {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.entry .hom {
+  font-size: 12px;
+  vertical-align: super;
+  color: var(--accent);
+  margin-left: -6px;
+}
+.entry .deva {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+.entry .pos {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.entry .audio-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+}
+.entry .gloss {
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.entry .gloss-hi {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+.entry .meta-line {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.entry .meta-line .lbl {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.entry .meta-line .var,
+.entry .meta-line .morph,
+.entry .meta-line .etym {
+  font-family: var(--serif);
+  color: var(--ink-soft);
+}
+.entry .cats {
+  margin-top: 6px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.entry .cat {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent-soft);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.entry .example {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(230, 220, 196, 0.18);
+  border-left: 2px solid var(--accent-soft);
+  border-radius: 0 6px 6px 0;
+}
+.entry .example .lbl {
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+.entry .example .ex-ipa {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink);
+}
+.entry .example .ex-deva {
+  font-family: var(--serif);
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-left: 6px;
+}
+.entry .example .ex-audio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  margin-left: 6px;
+  vertical-align: middle;
+  cursor: pointer;
+  padding: 0;
+}
+.entry .example .ex-gloss {
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.entry .note {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-style: italic;
+  padding-left: 8px;
+  border-left: 2px solid var(--rule);
+}
+.entry .refs {
+  margin-top: 8px;
+  font-size: 11px;
+}
+.entry .refs .lbl {
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  display: block;
+  margin-bottom: 2px;
+}
+.entry .ref {
+  color: var(--accent);
+  margin-right: 12px;
+  text-decoration: none;
+}
+.entry .ref:hover { text-decoration: underline; }
+.entry .ref .ref-gloss {
+  color: var(--ink-mute);
+  font-size: 10px;
+  margin-left: 2px;
+}
+
+/* Picture — container sized to its image, no cropping. */
+.entry .pic {
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: var(--paper-2);
+  cursor: zoom-in;
+  flex-shrink: 0;
+  align-self: start;
+  border: 1px solid var(--rule);
+  line-height: 0;          /* removes inline-image whitespace */
+}
+.entry .pic img {
+  display: block;
+  max-width: 360px;
+  max-height: 360px;
+  width: auto;
+  height: auto;
+}
+
+/* Picture-having entries get a bit more visual weight */
+.entry.has-picture {
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  gap: 20px;
+  box-shadow: 0 2px 10px rgba(80, 55, 20, 0.05);
+}
+.entry.has-picture .ipa {
+  font-size: 26px;
+  letter-spacing: -0.3px;
+}
+.entry.has-picture .deva {
+  font-size: 16px;
+}
+.entry.has-picture .gloss {
+  font-size: 15px;
+}
+.entry.has-picture .gloss-hi {
+  font-size: 13px;
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.lightbox img {
+  max-width: 92vw;
+  max-height: 92vh;
+  display: block;
+}
+.lightbox .close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.lightbox .close:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .cards-page { padding: 14px 14px 50px; }
+  .entry {
+    grid-template-columns: 1fr;
+    padding: 12px 14px;
+  }
+  .entry .pic { order: 2; align-self: stretch; }
+  .entry .pic img {
+    max-width: 100%;
+    max-height: none;
+    width: 100%;
+    height: auto;
+  }
+  .entry .body { order: 1; }
+  .entry .ipa { font-size: 17px; }
+  .entry .deva { font-size: 11px; }
+  .entry .gloss { font-size: 12px; }
+  .entry .gloss-hi { font-size: 11px; }
+  .entry.has-picture { padding: 14px 16px; }
+  .entry.has-picture .ipa { font-size: 22px; }
+  .entry.has-picture .deva { font-size: 13px; }
+}
