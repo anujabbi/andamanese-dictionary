@@ -116,3 +116,22 @@ body {
   td.lpTitleLetterCellUnused {width:1%;text-align:center;background-color: var(--paper);;border:1px solid var(--rule);}
   td.lpTitleMenuCell {text-align:center;background-color: var(--paper-2);cursor:pointer;cursor:hand;border:1px solid var(--rule);}
   td.lpTitleMenuCellHover {text-align:center;background-color: var(--hi);cursor:pointer;cursor:hand;border:1px solid var(--rule);}
+
+/* ---------- MOBILE / SMALL VIEWPORTS -----------
+   Once a viewport meta tag is present these rules make the reverse-index
+   word tables (index-english/, index-hindi/, index-ga_in_sript/) and the
+   alphabetical letter bar usable on phones. Lexicon and category entries
+   are restyled separately by assets/cards.css. */
+@media (max-width: 640px) {
+  body { margin: 8px; }
+
+  /* Reverse-index pages: <table> with no class. Fill the column and let
+     long English glosses wrap inside the left cell. */
+  body > table:not([class]) { width: 100%; border-collapse: collapse; }
+  body > table:not([class]) td {
+    padding: 8px 4px;
+    vertical-align: top;
+    word-break: break-word;
+    border-bottom: 1px solid var(--rule);
+  }
+}
