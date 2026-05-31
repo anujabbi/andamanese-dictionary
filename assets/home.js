@@ -49,11 +49,13 @@
     return escapeHtml(before) + '<mark>' + escapeHtml(match) + '</mark>' + escapeHtml(after);
   }
 
-  function searchIndex(query, index) {
+  function searchIndex(query, index, filter) {
     const q = query.trim().toLowerCase();
     if (!q || !index) return [];
     const scored = [];
     for (const e of index) {
+      if (filter === 'etym' && !e.etym) continue;
+      if (filter === 'morph' && !e.morph) continue;
       let score = 0;
       let field = null;
       if (e.ipa && e.ipa.toLowerCase().startsWith(q))      { score = 100; field = 'ipa'; }
@@ -190,11 +192,17 @@
 
   // ---------- Wiring ----------
 
+  function activeFilter() {
+    const sel = document.getElementById('ga-scope');
+    const v = sel ? sel.value : '';
+    return (v === 'etym' || v === 'morph') ? v : '';
+  }
+
   function onInput() {
     const q = document.getElementById('q').value;
     if (!q.trim()) { renderEmptyState(); return; }
     if (!INDEX) { pending = q; return; }
-    const results = searchIndex(q, INDEX);
+    const results = searchIndex(q, INDEX, activeFilter());
     renderDropdown(results, q);
   }
 
@@ -388,8 +396,22 @@
     document.addEventListener('click', onDocumentClick);
   }
 
+  function bindScope() {
+    const sel = document.getElementById('ga-scope');
+    if (!sel) return;
+    try {
+      const v = sessionStorage.getItem('ga.filter');
+      if (v === 'etym' || v === 'morph') sel.value = v;
+    } catch (e) { /* ignore */ }
+    sel.addEventListener('change', function () {
+      try { sessionStorage.setItem('ga.filter', activeFilter()); } catch (e) { /* ignore */ }
+      onInput();
+    });
+  }
+
   function init() {
     bindSearchBox();
+    bindScope();
     document.getElementById('wotd').addEventListener('click', onWotdClick);
     loadIndex().then(() => {
       if (pending && pending === document.getElementById('q').value) {
