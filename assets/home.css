@@ -343,3 +343,9 @@ a:hover { text-decoration: underline; }
   outline: none;
   cursor: pointer;
 }
+.ga-scope-wrap select[hidden] { display: none; }
+#ga-scope-value {
+  border-left: 1px solid var(--rule);
+  margin-left: 2px;
+  padding-left: 8px;
+}

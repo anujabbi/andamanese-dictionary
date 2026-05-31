@@ -1,7 +1,7 @@
 /* assets/filter.js — hide reverse-index rows that lack the active tag
-   (etym / morph), read from sessionStorage["ga.filter"]. Loaded only by
-   the reverse-index panes (index-english, index-hindi, index-ga_in_sript).
-   Vanilla IIFE; no modules. */
+   (etym / morph) and, for etym, an optional source language, read from
+   sessionStorage. Loaded only by the reverse-index panes
+   (index-english, index-hindi, index-ga_in_sript). Vanilla IIFE; no modules. */
 (function () {
   'use strict';
 
@@ -12,23 +12,34 @@
     } catch (e) { return ''; }
   }
 
+  function readFilterValue() {
+    try { return sessionStorage.getItem('ga.filter.value') || ''; } catch (e) { return ''; }
+  }
+
+  function etymSource(v) {
+    return v ? String(v).split(/[;,]/)[0].trim() : '';
+  }
+
   function goId(href) {
-    // "javascript:go('28', '3525')" -> "e3525"
     var m = /go\(\s*'[^']*'\s*,\s*'(\d+)'\s*\)/.exec(href || '');
     return m ? 'e' + m[1] : null;
   }
 
-  function qualifyingIds(index, filter) {
+  function qualifyingIds(index, filter, val) {
     var set = new Set();
     for (var i = 0; i < index.length; i++) {
       var e = index[i];
-      if (filter === 'etym' ? e.etym : e.morph) set.add(e.id);
+      if (filter === 'morph') {
+        if (e.morph) set.add(e.id);
+      } else if (filter === 'etym') {
+        if (e.etym && (!val || etymSource(e.etym) === val)) set.add(e.id);
+      }
     }
     return set;
   }
 
-  function apply(index, filter) {
-    var ids = qualifyingIds(index, filter);
+  function apply(index, filter, val) {
+    var ids = qualifyingIds(index, filter, val);
     var rows = document.querySelectorAll('tr');
     var considered = 0, visible = 0;
     rows.forEach(function (tr) {
@@ -55,9 +66,10 @@
   function init() {
     var filter = readFilter();
     if (!filter) return;
+    var val = filter === 'etym' ? readFilterValue() : '';
     fetch('../assets/search-index.json')
       .then(function (r) { return r.json(); })
-      .then(function (index) { apply(index, filter); })
+      .then(function (index) { apply(index, filter, val); })
       .catch(function (err) { console.warn('filter.js: index load failed', err); });
   }
 

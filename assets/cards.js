@@ -11,12 +11,24 @@
     } catch (e) { return ''; }
   }
 
+  function readFilterValue() {
+    try { return sessionStorage.getItem('ga.filter.value') || ''; } catch (e) { return ''; }
+  }
+
+  function etymSource(v) {
+    return v ? String(v).split(/[;,]/)[0].trim() : '';
+  }
+
   function applyFilter(container) {
     var f = readFilter();
+    var val = f === 'etym' ? readFilterValue() : '';
     var cards = container.querySelectorAll('.entry');
     var visible = 0;
     cards.forEach(function (card) {
-      var keep = !f || (f === 'etym' ? card.dataset.hasEtym : card.dataset.hasMorph);
+      var keep;
+      if (!f) keep = true;
+      else if (f === 'morph') keep = !!card.dataset.hasMorph;
+      else keep = !!card.dataset.hasEtym && (!val || card.dataset.etymSource === val);
       card.classList.toggle('ga-filtered-out', !keep);
       if (keep) visible++;
     });
@@ -187,7 +199,7 @@
   function renderCard(entry, pictureSrc) {
     const card = el('article', 'entry');
     if (entry.id) card.id = entry.id;
-    if (entry.etym) card.dataset.hasEtym = '1';
+    if (entry.etym) { card.dataset.hasEtym = '1'; card.dataset.etymSource = etymSource(entry.etym); }
     if (entry.morph) card.dataset.hasMorph = '1';
 
     const body = el('div', 'body');
