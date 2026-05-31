@@ -326,3 +326,14 @@
   .entry.has-picture .ipa { font-size: 22px; }
   .entry.has-picture .deva { font-size: 13px; }
 }
+
+/* ---- Tag filter (etym / morph) ---- */
+.ga-filtered-out { display: none !important; }
+.ga-empty {
+  margin: 24px auto;
+  max-width: 760px;
+  padding: 0 16px;
+  text-align: center;
+  font-style: italic;
+  color: #8a7c66;
+}
