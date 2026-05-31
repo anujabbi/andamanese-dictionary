@@ -13,3 +13,6 @@ Desktop.ini
 
 # Brainstorm visual companion scratch (skill writes here; not project content)
 .superpowers/
+
+# Playwright MCP scratch output (verification runs; not project content)
+.playwright-mcp/
