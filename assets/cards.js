@@ -4,6 +4,34 @@
 (function () {
   'use strict';
 
+  function readFilter() {
+    try {
+      var v = sessionStorage.getItem('ga.filter');
+      return (v === 'etym' || v === 'morph') ? v : '';
+    } catch (e) { return ''; }
+  }
+
+  function applyFilter(container) {
+    var f = readFilter();
+    var cards = container.querySelectorAll('.entry');
+    var visible = 0;
+    cards.forEach(function (card) {
+      var keep = !f || (f === 'etym' ? card.dataset.hasEtym : card.dataset.hasMorph);
+      card.classList.toggle('ga-filtered-out', !keep);
+      if (keep) visible++;
+    });
+    var prev = container.querySelector('.ga-empty');
+    if (prev) prev.remove();
+    if (f && visible === 0) {
+      var note = document.createElement('p');
+      note.className = 'ga-empty';
+      note.textContent = f === 'etym'
+        ? 'No entries with an etymology note on this page.'
+        : 'No entries with a morphology note on this page.';
+      container.appendChild(note);
+    }
+  }
+
   // ---------- Audio helpers ----------
 
   function isAudioAnchor(node) {
@@ -159,6 +187,8 @@
   function renderCard(entry, pictureSrc) {
     const card = el('article', 'entry');
     if (entry.id) card.id = entry.id;
+    if (entry.etym) card.dataset.hasEtym = '1';
+    if (entry.morph) card.dataset.hasMorph = '1';
 
     const body = el('div', 'body');
 
@@ -380,6 +410,7 @@
 
     maybeRenderHeader(container);
     installAudioHandler(container);
+    applyFilter(container);
   }
 
   // ---------- Bootstrap ----------
