@@ -36,7 +36,7 @@ test('cleanGloss decodes HTML entities (the bug that motivated this test)', () =
 
 test('extractEntryBlocks returns one string per entry paragraph', () => {
   const blocks = extractEntryBlocks(fixtureHtml);
-  assert.equal(blocks.length, 5);
+  assert.equal(blocks.length, 7);
   assert.ok(blocks[0].includes('main-audio-word'));
   assert.ok(blocks[4].includes('homonym-word'));
 });
@@ -89,4 +89,25 @@ test('parseEntry strips homonym subscripts from the IPA headword', () => {
   const blocks = extractEntryBlocks(fixtureHtml);
   const entry = parseEntry(blocks[4], 'sample-lexicon.htm');
   assert.equal(entry.ipa, 'homonym-word');
+});
+
+test('parseEntry extracts morph and the GA etymology (not the Hindi span)', () => {
+  const blocks = extractEntryBlocks(fixtureHtml);
+  const entry = parseEntry(blocks[5], 'sample-lexicon.htm');
+  assert.equal(entry.morph, 'tag-both');
+  assert.equal(entry.etym, 'Bale'); // GA value, never the nested बाले
+});
+
+test('parseEntry omits etym when only morph is present', () => {
+  const blocks = extractEntryBlocks(fixtureHtml);
+  const entry = parseEntry(blocks[6], 'sample-lexicon.htm');
+  assert.equal(entry.morph, 'm-only');
+  assert.equal(entry.etym, undefined);
+});
+
+test('parseEntry omits morph and etym when neither is present', () => {
+  const blocks = extractEntryBlocks(fixtureHtml);
+  const entry = parseEntry(blocks[2], 'sample-lexicon.htm'); // no-audio-word
+  assert.equal(entry.morph, undefined);
+  assert.equal(entry.etym, undefined);
 });

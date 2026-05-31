@@ -57,6 +57,8 @@ export function parseEntry(block, file) {
   const en = cleanGloss(firstMatch(block, /<span\s+class="lpGlossEnglish">([^<]*)<\/span>/));
   const hi = cleanGloss(firstMatch(block, /<span\s+class="lpGlossHindi">([^<]*)<\/span>/));
   const cat = cleanGloss(firstMatch(block, /<span\s+class="lpCategory">([^<]*)<\/span>/));
+  const morph = cleanGloss(firstMatch(block, /<span\s+class="lpMorph">([^<]*)<\/span>/));
+  const etym = cleanGloss(firstMatch(block, /<span\s+class="lpEtymology">([^<]*)<\/span>/));
   const audio = extractMainAudio(block);
 
   const entry = { id, file, ipa };
@@ -64,6 +66,8 @@ export function parseEntry(block, file) {
   if (en) entry.en = en;
   if (hi) entry.hi = hi;
   if (cat) entry.cat = cat;
+  if (morph) entry.morph = morph;
+  if (etym) entry.etym = etym;
   if (audio) entry.audio = audio;
   return entry;
 }
