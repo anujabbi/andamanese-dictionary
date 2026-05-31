@@ -59,28 +59,11 @@ export function parseEntry(block, file) {
   const cat = cleanGloss(firstMatch(block, /<span\s+class="lpCategory">([^<]*)<\/span>/));
   const audio = extractMainAudio(block);
 
-  const morph = extractMorph(block); 
-  const etym = extractEtym(block); 
-  
-  const envCategories = [
-    'bird', 'boat related', 'direction', 'edible fruit', 'edible items', 
-    'fire', 'fish', 'flora', 'hunting and gathering', 'marine', 
-    'medicine', 'natural environment', 'navigation', 'place', 
-    'reptile', 'season', 'space', 'super natural', 'insect and invertebrate'
-  ];
-
-  const entry = { id, file, ipa }; 
-  if (morph) entry.morph = morph; 
-  if (etym) entry.etym = etym;
+  const entry = { id, file, ipa };
   if (deva) entry.deva = deva;
   if (en) entry.en = en;
   if (hi) entry.hi = hi;
-  if (cat) {
-    entry.cat = cat;
-    if (envCategories.some(c => cat.toLowerCase().includes(c))) {
-      entry.env_lex = true;
-    }
-  }
+  if (cat) entry.cat = cat;
   if (audio) entry.audio = audio;
   return entry;
 }
@@ -122,16 +105,4 @@ if (isMain) {
   const entries = buildIndex(lexiconDir);
   writeFileSync(outPath, JSON.stringify(entries), 'utf8');
   process.stdout.write(`Wrote ${entries.length} entries to ${outPath}\n`);
-}
-
-export function extractMorph(block) {
-  const m = block.match(/<span\s+class="lpMorph">([^<]*)<\/span>/);
-  return m ? cleanGloss(m[1]) : null;
-}
-
-export function extractEtym(block) {
-  const m = block.match(/<span\s+class="lpEtymology">([^<]*)<\/span>/);
-  // Note: some Etym spans might contain nested spans for Hindi, but cleanGloss/decodeEntities handles standard cases.
-  // We'll pick the first text match.
-  return m ? cleanGloss(m[1]) : null;
 }

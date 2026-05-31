@@ -49,13 +49,8 @@
     return escapeHtml(before) + '<mark>' + escapeHtml(match) + '</mark>' + escapeHtml(after);
   }
 
-  function searchIndex(query, index, filter) {
+  function searchIndex(query, index) {
     const q = query.trim().toLowerCase();
-    if (filter) {
-      if (filter === 'env') index = index.filter(e => e.env_lex);
-      else if (filter === 'etym') index = index.filter(e => e.etym);
-      else if (filter === 'morph') index = index.filter(e => e.morph);
-    }
     if (!q || !index) return [];
     const scored = [];
     for (const e of index) {
@@ -195,11 +190,11 @@
 
   // ---------- Wiring ----------
 
-  var onInputOriginal = function() {
+  function onInput() {
     const q = document.getElementById('q').value;
-    if (!q.trim()) { hideFilter(); renderEmptyState(); return; }
+    if (!q.trim()) { renderEmptyState(); return; }
     if (!INDEX) { pending = q; return; }
-    const filter = activeFilter(); const results = searchIndex(q, INDEX, filter);
+    const results = searchIndex(q, INDEX);
     renderDropdown(results, q);
   }
 
@@ -394,7 +389,7 @@
   }
 
   function init() {
-    bindSearchBox(); document.getElementById("filter-bar")?.addEventListener("click", onFilterClick);
+    bindSearchBox();
     document.getElementById('wotd').addEventListener('click', onWotdClick);
     loadIndex().then(() => {
       if (pending && pending === document.getElementById('q').value) {
@@ -411,36 +406,3 @@
     init();
   }
 })();
-
-  function activeFilter() {
-    const btn = document.querySelector('.filter-bar button.active');
-    return btn ? btn.getAttribute('data-filter') : null;
-  }
-
-  function hideFilter() {
-    document.getElementById('filter-bar').hidden = true;
-  }
-
-  function showFilter() {
-    document.getElementById('filter-bar').hidden = false;
-  }
-
-  function onFilterClick(e) {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const wasActive = btn.classList.contains('active');
-    document.querySelectorAll('.filter-bar button').forEach(b => b.classList.remove('active'));
-    if (!wasActive) btn.classList.add('active');
-    onInput();
-  }
-
-  // Hook into onInput to show filter
-  const oldOnInput = onInputOriginal;
-  onInput = function() {
-    const q = document.getElementById('q').value.trim();
-    if (q) showFilter();
-    oldOnInput();
-  };
-
-  // Add listener
-  document.getElementById('filter-bar')?.addEventListener('click', onFilterClick);
