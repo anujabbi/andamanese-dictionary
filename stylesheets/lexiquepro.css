@@ -51,6 +51,7 @@ body {
   span.lpBorrowedWord {font-size:10.0pt;font-weight:normal;font-family:"Times New Roman","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--ink-soft);}
   span.lpEtymology {font-size:12.0pt;font-weight:normal;font-family:"Arial Unicode MS","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--ink-mute);}
   span.lpCategory {font-size:12.0pt;font-weight:normal;font-family:"Arial Unicode MS","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--accent);}
+  span.lpEnvLex {display:inline-block;margin-left:6px;padding:1px 7px;font-size:8.0pt;font-weight:bold;font-variant:small-caps;letter-spacing:0.04em;color:#fff;background:var(--accent);border-radius:9px;vertical-align:middle;font-family:"Arial Unicode MS","Lucida Sans Unicode",Arial,sans-serif;}
   span.lpExample {font-size:10.0pt;font-weight:bold;font-family:"Lucida Sans Unicode","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--ink);}
   span.lpEncycInfo {font-size:9.0pt;font-weight:normal;font-family:"Lucida Sans Unicode","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--ink-soft);}
   span.lpGloss {font-size:9.0pt;font-weight:normal;font-family:"Lucida Sans Unicode","Lucida Sans Unicode","Arial Unicode MS",Arial,sans-serif;color:var(--ink);}
