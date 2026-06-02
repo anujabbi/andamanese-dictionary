@@ -8,7 +8,7 @@
   function readFilter() {
     try {
       var v = sessionStorage.getItem('ga.filter');
-      return (v === 'etym' || v === 'morph') ? v : '';
+      return (v === 'etym' || v === 'morph' || v === 'env') ? v : '';
     } catch (e) { return ''; }
   }
 
@@ -33,6 +33,8 @@
         if (e.morph) set.add(e.id);
       } else if (filter === 'etym') {
         if (e.etym && (!val || etymSource(e.etym) === val)) set.add(e.id);
+      } else if (filter === 'env') {
+        if (e.env) set.add(e.id);
       }
     }
     return set;
@@ -58,6 +60,8 @@
       note.className = 'ga-empty';
       note.textContent = filter === 'etym'
         ? 'No entries with an etymology note on this page.'
+        : filter === 'env'
+        ? 'No environmental-lexicon entries on this page.'
         : 'No entries with a morphology note on this page.';
       document.body.appendChild(note);
     }
