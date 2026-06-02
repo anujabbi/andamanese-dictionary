@@ -18,7 +18,15 @@ entries via the existing scope dropdown.
   step a committed, repo-relative, idempotent, tested script.)*
 - **Markup:** a dedicated `lpEnvLex` span, NOT a third `lpCategory` span (a category span
   would make "Environmental" masquerade as a real semantic category).
-- **Visibility:** rendered as a small visible pill via a new `lexiquepro.css` rule.
+- **Visibility:** rendered as a small visible pill. NOTE: the lexicon entry pages are
+  re-rendered client-side by `assets/cards.js` (a prior "entry-card-layout" project), which
+  parses each legacy `<p class="lpLexEntryPara">` into an `<article class="entry">` card and
+  removes the original paragraph. So the pill must be produced by `cards.js` + `cards.css`;
+  the `lexiquepro.css` rule remains only as the no-JS fallback.
+- **Browse-page filter:** `cards.js` already filters its cards by ETYM/MORPH using the shared
+  `ga.filter` sessionStorage key. ENV is wired into the same mechanism, so selecting ENV on the
+  homepage carries into the browse pages and hides non-environmental cards — consistent with
+  ETYM/MORPH.
 - **Dropdown label:** `ENV` (matches the terse `ETYM` / `MORPH` style).
 - **UI surface:** one new option in the existing `#ga-scope` select; reuse the existing
   `bindScope` / `activeFilter` / `searchIndex` filter pattern. No `onInput` monkey-patching
