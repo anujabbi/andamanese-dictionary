@@ -1,0 +1,69 @@
+/* assets/chrome.css — shared level-2 chrome (header, letter row, scope filter,
+   two-pane index/category layout). Relies on the CSS variables (--accent, --paper,
+   --serif, …) already defined by cards.css / lexiquepro.css. */
+
+/* ---- sticky header ---- */
+.hdr{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:18px;
+  padding:12px 24px;background:rgba(251,246,236,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid #e7dcc2;}
+.hdr .brand{font-family:var(--serif);font-size:19px;color:var(--ink);white-space:nowrap;text-decoration:none;}
+.hdr .brand b{color:var(--accent);font-weight:600;}
+.hdr nav{display:flex;gap:4px;flex-wrap:wrap;}
+.hdr nav a{font-size:13px;color:var(--ink-soft);padding:6px 11px;border-radius:8px;text-decoration:none;}
+.hdr nav a:hover{background:var(--paper-2);color:var(--accent);}
+.hdr nav a.active{background:var(--accent);color:#fff;}
+.hdr .spacer{flex:1;}
+
+/* ---- Show filter (room for the ETYM source sub-dropdown) ---- */
+.scope{display:inline-flex;align-items:center;gap:9px;background:#fff;
+  border:1px solid var(--accent-soft);border-radius:12px;padding:5px 10px 5px 13px;}
+.scope label{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-mute);}
+.scope select{border:none;background:transparent;font-family:var(--sans);font-size:13px;
+  color:var(--ink);outline:none;cursor:pointer;padding:2px 2px;min-width:104px;}
+.scope .scope-src{border-left:1px solid #e6dcc4;padding-left:9px;min-width:118px;color:var(--accent);}
+.scope .scope-src[hidden]{display:none;}
+
+/* ---- top letter row + script toggle ---- */
+.letterbar{position:sticky;top:57px;z-index:15;display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
+  padding:11px 24px;background:rgba(251,246,236,.92);backdrop-filter:blur(6px);border-bottom:1px solid #e7dcc2;}
+.letterbar.labeled{justify-content:flex-start;gap:5px;}
+.letterbar a{font-family:var(--serif);font-size:15px;color:var(--ink-soft);padding:3px 11px;border-radius:8px;cursor:pointer;text-decoration:none;}
+.letterbar a:hover{background:var(--paper-2);color:var(--accent);}
+.letterbar a.active{background:var(--accent);color:#fff;}
+.scriptseg{display:inline-flex;border:1px solid var(--accent-soft);border-radius:8px;overflow:hidden;
+  margin-right:14px;align-self:center;}
+.scriptseg button{border:none;background:#fff;color:var(--ink-soft);font-family:var(--sans);
+  font-size:12px;padding:4px 12px;cursor:pointer;}
+.scriptseg button.active{background:var(--accent);color:#fff;}
+
+/* ---- two-pane index (term list + entry) ---- */
+.layout{display:flex;}
+.idx{position:sticky;top:101px;align-self:flex-start;height:calc(100vh - 101px);overflow:auto;
+  width:340px;border-right:1px solid #e7dcc2;background:var(--paper);}
+.idx .ttl{font-family:var(--serif);font-size:15px;color:var(--ink);padding:14px 16px 10px;border-bottom:1px solid #eadfc6;}
+.ilist a{display:flex;justify-content:space-between;gap:12px;padding:9px 16px;
+  border-bottom:1px solid #f0e7d3;color:var(--ink-soft);font-size:14px;align-items:baseline;cursor:pointer;text-decoration:none;}
+.ilist a:hover{background:var(--paper-2);}
+.ilist a.active{background:#fff;box-shadow:inset 3px 0 0 var(--accent);color:var(--ink);}
+.ilist a.ga-filtered-out{display:none;}
+.ilist .ipa{font-family:var(--serif);color:var(--accent);font-size:15px;white-space:nowrap;}
+.pane{flex:1;padding:0 24px;}
+.pane .hint{max-width:680px;margin:28px auto;color:var(--ink-mute);font-size:13px;text-align:center;}
+.pane .cards{max-width:680px;margin:0 auto;padding-top:6px;}
+
+/* ---- categories left list ---- */
+.catlist{position:sticky;top:57px;align-self:flex-start;height:calc(100vh - 57px);overflow:auto;
+  width:260px;border-right:1px solid #e7dcc2;background:var(--paper);padding:12px 0;}
+.catlist .ttl{font-family:var(--serif);font-size:14px;color:var(--ink-mute);padding:4px 18px 10px;
+  text-transform:uppercase;letter-spacing:.5px;}
+.catlist a{display:block;padding:7px 18px;color:var(--ink-soft);font-size:13px;border-left:3px solid transparent;cursor:pointer;text-decoration:none;}
+.catlist a:hover{background:var(--paper-2);}
+.catlist a.active{background:#fff;border-left-color:var(--accent);color:var(--ink);font-weight:600;}
+
+/* ---- responsive: stack the two-pane on narrow screens ---- */
+@media (max-width:720px){
+  .layout{flex-direction:column;}
+  .idx,.catlist{position:static;width:auto;height:auto;max-height:40vh;border-right:none;border-bottom:1px solid #e7dcc2;}
+  .hdr{gap:10px;padding:10px 14px;}
+  .hdr nav a{padding:5px 8px;}
+}
