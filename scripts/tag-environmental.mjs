@@ -43,21 +43,25 @@ export function tagHtml(html) {
 }
 
 // ---------- CLI ----------
+// Tags the lexicon AND the per-category copies (categories/cNNN.htm), so the
+// Environmental pill + ENV filter work in the cards renderer everywhere those
+// entry paragraphs are surfaced.
+function tagDir(dir, re) {
+  let total = 0;
+  for (const file of readdirSync(dir).filter(f => re.test(f)).sort()) {
+    const path = join(dir, file);
+    const html = readFileSync(path, 'utf8');
+    const { html: out, count } = tagHtml(html);
+    if (count > 0) { writeFileSync(path, out, 'utf8'); total += count; }
+  }
+  return total;
+}
+
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const lexiconDir = join(here, '..', 'lexicon');
-  const files = readdirSync(lexiconDir).filter(f => /^\d{2}\.htm$/.test(f)).sort();
-  let total = 0;
-  for (const file of files) {
-    const path = join(lexiconDir, file);
-    const html = readFileSync(path, 'utf8');
-    const { html: out, count } = tagHtml(html);
-    if (count > 0) {
-      writeFileSync(path, out, 'utf8');
-      total += count;
-    }
-    process.stdout.write(`${file}: tagged ${count}\n`);
-  }
-  process.stdout.write(`Done. Tagged ${total} environmental entries.\n`);
+  const repo = join(here, '..');
+  const lex = tagDir(join(repo, 'lexicon'), /^\d{2}\.htm$/);
+  const cat = tagDir(join(repo, 'categories'), /^c\d{3}\.htm$/);
+  process.stdout.write(`Done. Tagged ${lex} lexicon + ${cat} category entries (idempotent).\n`);
 }

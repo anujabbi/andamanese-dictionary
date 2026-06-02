@@ -132,5 +132,48 @@
     document.addEventListener('ga:filterchange', applyListFilter);
   }
 
-  window.GABrowse = { loadEntry: loadEntry, initIndexPage: initIndexPage };
+  // Two-pane categories page controller. Page provides #catlist and #pane.
+  function initCategoryPage(cfg) {
+    var base = cfg.base || '';
+    var catlist = document.getElementById('catlist');
+    var pane = document.getElementById('pane');
+    var curCards = null;
+
+    function showCategory(file, name) {
+      Array.prototype.forEach.call(catlist.querySelectorAll('a'), function (a) {
+        a.classList.toggle('active', a.dataset.file === file);
+      });
+      pane.innerHTML = '';
+      var wrap = document.createElement('div'); wrap.className = 'cards';
+      var head = document.createElement('p'); head.className = 'lpTitlePara'; head.textContent = name;
+      wrap.appendChild(head);
+      pane.appendChild(wrap);
+      curCards = wrap;
+      fetch(base + 'categories/' + file).then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        Array.prototype.forEach.call(doc.querySelectorAll('p.lpLexEntryPara'), function (p) {
+          var entry = window.GACards.parseEntry(p);
+          if (entry) wrap.appendChild(window.GACards.renderCard(entry));
+        });
+        window.GACards.applyFilter(wrap);
+      });
+      try { history.replaceState(null, '', '#' + file); } catch (e) { location.hash = file; }
+    }
+
+    fetch(base + 'assets/category-list.json').then(function (r) { return r.json(); }).then(function (list) {
+      list.forEach(function (c) {
+        var a = document.createElement('a');
+        a.dataset.file = c.file; a.textContent = c.name;
+        a.addEventListener('click', function (e) { e.preventDefault(); showCategory(c.file, c.name); });
+        catlist.appendChild(a);
+      });
+      var hash = (location.hash || '').replace('#', '');
+      var initial = list.filter(function (c) { return c.file === hash; })[0] || list[0];
+      if (initial) showCategory(initial.file, initial.name);
+    }).catch(function (e) { console.warn('browse.js: category list failed', e); });
+
+    document.addEventListener('ga:filterchange', function () { if (curCards) window.GACards.applyFilter(curCards); });
+  }
+
+  window.GABrowse = { loadEntry: loadEntry, initIndexPage: initIndexPage, initCategoryPage: initCategoryPage };
 })();
