@@ -116,7 +116,31 @@
     onReady: function (fn) { document.addEventListener('ga:chromeready', fn); },
   };
 
-  function start() { init(); document.dispatchEvent(new CustomEvent('ga:chromeready')); }
+  // Lexicon pages get an IPA letter row that navigates between the per-letter
+  // pages. (The Devanagari toggle is added later by browse.js/lexicon-dev.)
+  function renderLexiconLetters() {
+    var cur = (location.pathname.match(/(\d{2})\.htm$/) || [])[1];
+    fetch(B + 'assets/lexicon-letters.json')
+      .then(function (r) { return r.json(); })
+      .then(function (map) {
+        renderLetterRow({
+          letters: map.map(function (m) {
+            return {
+              label: m.label,
+              href: B + 'lexicon/' + m.file,
+              active: cur != null && m.file === cur + '.htm',
+            };
+          }),
+        });
+      })
+      .catch(function (e) { console.warn('chrome.js: lexicon letters failed', e); });
+  }
+
+  function start() {
+    init();
+    document.dispatchEvent(new CustomEvent('ga:chromeready'));
+    if (CFG.section === 'lexicon') renderLexiconLetters();
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();
