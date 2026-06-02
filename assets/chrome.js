@@ -84,6 +84,27 @@
     srcSel.addEventListener('change', onChange);
   }
 
+  // Build/replace the top letter row under the header.
+  // opts = { letters: [{label, href?, key?, active?}], toggle?: HTMLElement }
+  function renderLetterRow(opts) {
+    var hdr = document.querySelector('header.ga-chrome');
+    var existing = hdr.nextElementSibling;
+    if (existing && existing.classList.contains('letterbar')) existing.remove();
+    var bar = document.createElement('nav');
+    bar.className = 'letterbar' + (opts.toggle ? ' labeled' : '');
+    if (opts.toggle) bar.appendChild(opts.toggle);
+    (opts.letters || []).forEach(function (L) {
+      var a = document.createElement('a');
+      a.textContent = L.label;
+      if (L.href) a.href = L.href;
+      if (L.key != null) a.dataset.key = L.key;
+      if (L.active) a.className = 'active';
+      bar.appendChild(a);
+    });
+    hdr.parentNode.insertBefore(bar, hdr.nextSibling);
+    return bar;
+  }
+
   // Public hook surface used by page-specific bootstraps and browse.js.
   window.GAChrome = {
     config: CFG,
@@ -91,6 +112,7 @@
     headerEl: function () { return document.querySelector('header.ga-chrome'); },
     mainSelect: function () { return mainSel; },
     sourceSelect: function () { return srcSel; },
+    renderLetterRow: renderLetterRow,
     onReady: function (fn) { document.addEventListener('ga:chromeready', fn); },
   };
 
