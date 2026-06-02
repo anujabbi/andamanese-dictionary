@@ -433,6 +433,10 @@
 
   // ---------- Bootstrap ----------
 
+  // Expose the renderer so the two-pane index/category pages (browse.js) can
+  // render an entry parsed from a fetched document, not only the current page.
+  window.GACards = { parseEntry: parseEntry, renderCard: renderCard, applyFilter: applyFilter };
+
   function init() {
     transformPage();
     installLightbox();
