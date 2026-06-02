@@ -426,9 +426,13 @@
     for (const p of paras) p.remove();
     for (const o of orphansToRemove) o.remove();
 
-    maybeRenderHeader(container);
+    // The shared chrome.js header now provides Home/nav, so the standalone
+    // "← Home" bar is redundant — only render it if chrome is NOT present.
+    if (!window.GA_PAGE) maybeRenderHeader(container);
     installAudioHandler(container);
     applyFilter(container);
+    // Re-apply when the shared Show filter changes (chrome.js dispatches this).
+    document.addEventListener('ga:filterchange', function () { applyFilter(container); });
   }
 
   // ---------- Bootstrap ----------

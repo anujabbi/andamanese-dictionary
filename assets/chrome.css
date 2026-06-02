@@ -24,10 +24,12 @@
 .scope .scope-src[hidden]{display:none;}
 
 /* ---- top letter row + script toggle ---- */
-.letterbar{position:sticky;top:57px;z-index:15;display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
-  padding:11px 24px;background:rgba(251,246,236,.92);backdrop-filter:blur(6px);border-bottom:1px solid #e7dcc2;}
-.letterbar.labeled{justify-content:flex-start;gap:5px;}
-.letterbar a{font-family:var(--serif);font-size:15px;color:var(--ink-soft);padding:3px 11px;border-radius:8px;cursor:pointer;text-decoration:none;}
+.letterbar{position:sticky;top:57px;z-index:15;display:flex;flex-wrap:nowrap;gap:2px;justify-content:center;
+  align-items:center;padding:8px 16px;background:rgba(251,246,236,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid #e7dcc2;overflow-x:auto;}
+.letterbar.labeled{justify-content:flex-start;}
+.letterbar a{font-family:var(--serif);font-size:14px;color:var(--ink-soft);padding:2px 7px;border-radius:7px;
+  cursor:pointer;text-decoration:none;white-space:nowrap;flex:0 0 auto;}
 .letterbar a:hover{background:var(--paper-2);color:var(--accent);}
 .letterbar a.active{background:var(--accent);color:#fff;}
 .scriptseg{display:inline-flex;border:1px solid var(--accent-soft);border-radius:8px;overflow:hidden;

@@ -58,6 +58,20 @@
 
   function readLS(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function writeLS(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+  function etymSource(v) { return v ? String(v).split(/[;,]/)[0].trim() : ''; }
+
+  // Fill the ETYM "source" dropdown with the distinct etymology sources in the index.
+  function populateSources() {
+    fetch(B + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
+      var set = {};
+      idx.forEach(function (e) { if (e.etym) { var s = etymSource(e.etym); if (s) set[s] = 1; } });
+      var cur = readLS('ga.filter.value');
+      srcSel.innerHTML = '';
+      srcSel.appendChild(opt('', 'All sources'));
+      Object.keys(set).sort().forEach(function (s) { srcSel.appendChild(opt(s, s)); });
+      srcSel.value = cur;
+    }).catch(function (e) { console.warn('chrome.js: source list failed', e); });
+  }
 
   function syncSrcVisibility() { srcSel.hidden = mainSel.value !== 'etym'; }
 
@@ -230,6 +244,7 @@
 
   function start() {
     init();
+    populateSources();
     document.dispatchEvent(new CustomEvent('ga:chromeready'));
     if (CFG.section === 'lexicon') initLexicon();
   }
