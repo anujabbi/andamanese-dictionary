@@ -61,6 +61,7 @@
       if (filter === 'etym' && !e.etym) continue;
       if (filter === 'etym' && value && etymSource(e.etym) !== value) continue;
       if (filter === 'morph' && !e.morph) continue;
+      if (filter === 'env' && !e.env) continue;
       let score = 0;
       let field = null;
       if (e.ipa && e.ipa.toLowerCase().startsWith(q))      { score = 100; field = 'ipa'; }
@@ -200,7 +201,7 @@
   function activeFilter() {
     const sel = document.getElementById('ga-scope');
     const v = sel ? sel.value : '';
-    return (v === 'etym' || v === 'morph') ? v : '';
+    return (v === 'etym' || v === 'morph' || v === 'env') ? v : '';
   }
 
   function activeFilterValue() {
@@ -441,7 +442,7 @@
     if (!sel) return;
     try {
       const v = sessionStorage.getItem('ga.filter');
-      if (v === 'etym' || v === 'morph') sel.value = v;
+      if (v === 'etym' || v === 'morph' || v === 'env') sel.value = v;
     } catch (e) { /* ignore */ }
     syncScopeValueVisibility();
     sel.addEventListener('change', function () {

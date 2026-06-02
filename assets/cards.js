@@ -7,7 +7,7 @@
   function readFilter() {
     try {
       var v = sessionStorage.getItem('ga.filter');
-      return (v === 'etym' || v === 'morph') ? v : '';
+      return (v === 'etym' || v === 'morph' || v === 'env') ? v : '';
     } catch (e) { return ''; }
   }
 
@@ -28,6 +28,7 @@
       var keep;
       if (!f) keep = true;
       else if (f === 'morph') keep = !!card.dataset.hasMorph;
+      else if (f === 'env') keep = !!card.dataset.env;
       else keep = !!card.dataset.hasEtym && (!val || card.dataset.etymSource === val);
       card.classList.toggle('ga-filtered-out', !keep);
       if (keep) visible++;
@@ -39,6 +40,8 @@
       note.className = 'ga-empty';
       note.textContent = f === 'etym'
         ? 'No entries with an etymology note on this page.'
+        : f === 'env'
+        ? 'No environmental-lexicon entries on this page.'
         : 'No entries with a morphology note on this page.';
       container.appendChild(note);
     }
@@ -92,6 +95,7 @@
       categories: [],
       note: null,
       refs: [],
+      env: !!p.querySelector('span.lpEnvLex'),
     };
 
     // Homonym subscript appears as <sub> after the headword span.
@@ -201,6 +205,7 @@
     if (entry.id) card.id = entry.id;
     if (entry.etym) { card.dataset.hasEtym = '1'; card.dataset.etymSource = etymSource(entry.etym); }
     if (entry.morph) card.dataset.hasMorph = '1';
+    if (entry.env) card.dataset.env = '1';
 
     const body = el('div', 'body');
 
@@ -278,8 +283,9 @@
     }
 
     // Categories
-    if (entry.categories.length) {
+    if (entry.categories.length || entry.env) {
       const cats = el('div', 'cats');
+      if (entry.env) cats.appendChild(el('span', 'env-tag', 'Environmental'));
       for (const c of entry.categories) cats.appendChild(el('span', 'cat', c));
       body.appendChild(cats);
     }

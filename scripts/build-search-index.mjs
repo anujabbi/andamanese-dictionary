@@ -60,6 +60,7 @@ export function parseEntry(block, file) {
   const morph = cleanGloss(firstMatch(block, /<span\s+class="lpMorph">([^<]*)<\/span>/));
   const etym = cleanGloss(firstMatch(block, /<span\s+class="lpEtymology">([^<]*)<\/span>/));
   const audio = extractMainAudio(block);
+  const env = extractEnv(block);
 
   const entry = { id, file, ipa };
   if (deva) entry.deva = deva;
@@ -69,7 +70,12 @@ export function parseEntry(block, file) {
   if (morph) entry.morph = morph;
   if (etym) entry.etym = etym;
   if (audio) entry.audio = audio;
+  if (env) entry.env = true;
   return entry;
+}
+
+export function extractEnv(block) {
+  return /<span\s+class="lpEnvLex">/.test(block);
 }
 
 // ---------- CLI ----------
