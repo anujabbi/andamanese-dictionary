@@ -17,11 +17,17 @@ export function isEnvironmental(rawCategory) {
   return ENV_CATEGORIES.has(cleanGloss(rawCategory));
 }
 
-// `block` is a full <p class="lpLexEntryPara">…</p> string.
+// `block` is a full <p class="lpLexEntryPara">…</p> string. An entry may carry
+// several semantic-domain categories; tag it if ANY of them is environmental
+// (the environmental category is not always the first one).
 export function tagBlock(block) {
   if (block.includes('class="lpEnvLex"')) return block; // idempotent
-  const m = block.match(/<span class="lpCategory">([^<]*)<\/span>/);
-  if (!m || !isEnvironmental(m[1])) return block;
+  const cats = block.matchAll(/<span class="lpCategory">([^<]*)<\/span>/g);
+  let isEnv = false;
+  for (const m of cats) {
+    if (isEnvironmental(m[1])) { isEnv = true; break; }
+  }
+  if (!isEnv) return block;
   const close = block.lastIndexOf('</p>');
   return block.slice(0, close) + '<span class="lpEnvLex">Environmental</span>' + block.slice(close);
 }

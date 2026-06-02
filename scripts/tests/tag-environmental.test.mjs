@@ -35,6 +35,13 @@ const NON_ENV_BLOCK =
   '<p class="lpLexEntryPara"><span id="e10" class="lpLexEntryName">x</span> ' +
   '<span class="lpCategory">grammar</span></p>';
 
+// An entry can carry more than one semantic domain; the environmental one need
+// not be the first category. Such entries must still be tagged.
+const MULTI_ENV_BLOCK =
+  '<p class="lpLexEntryPara"><span id="e11" class="lpLexEntryName">y</span> ' +
+  '<span class="lpCategory">tool</span><span class="lpPunctuation">, </span><span class="lpCategory">औज़ार</span>' +
+  '<span class="lpPunctuation">; </span><span class="lpCategory">fish</span><span class="lpPunctuation">, </span><span class="lpCategory">मछली</span></p>';
+
 test('tagBlock inserts the pill before </p> for an environmental entry', () => {
   const out = tagBlock(ENV_BLOCK);
   assert.ok(out.includes('<span class="lpEnvLex">Environmental</span></p>'));
@@ -48,6 +55,11 @@ test('tagBlock is idempotent — re-tagging an already-tagged block is a no-op',
 
 test('tagBlock leaves a non-environmental entry untouched', () => {
   assert.equal(tagBlock(NON_ENV_BLOCK), NON_ENV_BLOCK);
+});
+
+test('tagBlock tags an entry whose environmental category is not the first one', () => {
+  const out = tagBlock(MULTI_ENV_BLOCK);
+  assert.ok(out.includes('<span class="lpEnvLex">Environmental</span></p>'));
 });
 
 test('tagHtml tags every environmental paragraph and reports the count', () => {
