@@ -139,30 +139,99 @@
     onReady: function (fn) { document.addEventListener('ga:chromeready', fn); },
   };
 
-  // Lexicon pages get an IPA letter row that navigates between the per-letter
-  // pages. (The Devanagari toggle is added later by browse.js/lexicon-dev.)
-  function renderLexiconLetters() {
+  function firstLetterIn(text, set) {
+    var s = String(text || '');
+    for (var i = 0; i < s.length; i++) { if (set.has(s[i])) return s[i]; }
+    return '';
+  }
+
+  // Lexicon pages: IPA letter row (navigates per-letter pages) with an
+  // [a–z | देव] toggle. देव mode is data-driven from search-index.json: it hides
+  // the static cards and renders a Devanagari-grouped card list in their place.
+  function initLexicon() {
     var cur = (location.pathname.match(/(\d{2})\.htm$/) || [])[1];
-    fetch(B + 'assets/lexicon-letters.json')
-      .then(function (r) { return r.json(); })
-      .then(function (map) {
-        renderLetterRow({
-          letters: map.map(function (m) {
-            return {
-              label: m.label,
-              href: B + 'lexicon/' + m.file,
-              active: cur != null && m.file === cur + '.htm',
-            };
-          }),
-        });
-      })
-      .catch(function (e) { console.warn('chrome.js: lexicon letters failed', e); });
+    var lexMap = null, index = null, collation = null, devBox = null;
+    function cardsPage() { return document.querySelector('.cards-page'); }
+
+    function entryFromIndex(e) {
+      return { id: e.id, ipa: e.ipa, hom: null, deva: e.deva || null, morph: e.morph || null,
+               varText: null, etym: e.etym || null, pos: null, glossEn: e.en || null,
+               glossHi: e.hi || null, audioMain: e.audio || null, examples: [],
+               categories: e.cat ? [e.cat] : [], note: null, refs: [], env: !!e.env };
+    }
+    function toggleEl() {
+      return buildScriptToggle([{ key: 'ipa', label: 'a–z' }, { key: 'dev', label: 'देव' }], setMode);
+    }
+    function setToggleActive(m) {
+      var seg = document.querySelector('.scriptseg'); if (!seg) return;
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+        b.classList.toggle('active', b.dataset.key === m);
+      });
+    }
+    function setMode(m) {
+      try { sessionStorage.setItem('ga.script.lexicon', m); } catch (e) {}
+      if (m === 'dev') showDev(); else showIpa();
+    }
+    function showIpa() {
+      if (devBox) { devBox.remove(); devBox = null; }
+      var cp = cardsPage(); if (cp) cp.style.display = '';
+      renderLetterRow({
+        toggle: toggleEl(),
+        letters: lexMap.map(function (m) {
+          return { label: m.label, href: B + 'lexicon/' + m.file, active: cur != null && m.file === cur + '.htm' };
+        }),
+      });
+      setToggleActive('ipa');
+    }
+    function showDev() {
+      var cp = cardsPage(); if (cp) cp.style.display = 'none';
+      var set = new Set(collation.devGa);
+      var present = {};
+      index.forEach(function (e) { if (e.deva) { var g = firstLetterIn(e.deva, set); if (g) present[g] = 1; } });
+      var letters = collation.devGa.filter(function (l) { return present[l]; });
+      renderLetterRow({
+        toggle: toggleEl(),
+        letters: letters.map(function (l, i) { return { label: l, key: 'dev:' + l, active: i === 0 }; }),
+      });
+      setToggleActive('dev');
+      var bar = document.querySelector('nav.letterbar');
+      bar.addEventListener('click', function (e) {
+        var a = e.target.closest('a[data-key]'); if (!a) return; e.preventDefault();
+        Array.prototype.forEach.call(bar.querySelectorAll('a'), function (x) { x.classList.remove('active'); });
+        a.classList.add('active');
+        showGroup(a.dataset.key.slice(4));
+      });
+      if (!devBox) {
+        devBox = document.createElement('div'); devBox.className = 'cards';
+        bar.parentNode.insertBefore(devBox, bar.nextSibling);
+      }
+      if (letters.length) showGroup(letters[0]);
+    }
+    function showGroup(letter) {
+      var set = new Set(collation.devGa);
+      var rows = index.filter(function (e) { return e.deva && firstLetterIn(e.deva, set) === letter; });
+      rows.sort(function (a, b) { return String(a.deva).localeCompare(String(b.deva)); });
+      devBox.innerHTML = '';
+      var head = document.createElement('p'); head.className = 'lpTitlePara'; head.textContent = letter;
+      devBox.appendChild(head);
+      rows.forEach(function (e) { devBox.appendChild(window.GACards.renderCard(entryFromIndex(e))); });
+    }
+
+    Promise.all([
+      fetch(B + 'assets/lexicon-letters.json').then(function (r) { return r.json(); }),
+      fetch(B + 'assets/search-index.json').then(function (r) { return r.json(); }),
+      fetch(B + 'assets/collation-data.json').then(function (r) { return r.json(); }),
+    ]).then(function (res) {
+      lexMap = res[0]; index = res[1]; collation = res[2];
+      var saved = ''; try { saved = sessionStorage.getItem('ga.script.lexicon') || ''; } catch (e) {}
+      if (saved === 'dev') showDev(); else showIpa();
+    }).catch(function (e) { console.warn('chrome.js: lexicon init failed', e); });
   }
 
   function start() {
     init();
     document.dispatchEvent(new CustomEvent('ga:chromeready'));
-    if (CFG.section === 'lexicon') renderLexiconLetters();
+    if (CFG.section === 'lexicon') initLexicon();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
