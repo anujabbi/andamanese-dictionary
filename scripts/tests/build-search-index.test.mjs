@@ -9,6 +9,7 @@ import {
   extractMainAudio,
   cleanGloss,
   decodeEntities,
+  extractEnv,
 } from '../build-search-index.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -110,4 +111,16 @@ test('parseEntry omits morph and etym when neither is present', () => {
   const entry = parseEntry(blocks[2], 'sample-lexicon.htm'); // no-audio-word
   assert.equal(entry.morph, undefined);
   assert.equal(entry.etym, undefined);
+});
+
+test('extractEnv is true when the lpEnvLex marker is present, false otherwise', () => {
+  const blocks = extractEntryBlocks(fixtureHtml);
+  assert.equal(extractEnv(blocks[5]), true);   // e6 carries the marker
+  assert.equal(extractEnv(blocks[6]), false);  // e7 does not
+});
+
+test('parseEntry sets env:true only for marked entries', () => {
+  const blocks = extractEntryBlocks(fixtureHtml);
+  assert.equal(parseEntry(blocks[5], 'sample-lexicon.htm').env, true);
+  assert.equal(parseEntry(blocks[6], 'sample-lexicon.htm').env, undefined);
 });
