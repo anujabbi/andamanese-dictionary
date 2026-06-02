@@ -186,6 +186,8 @@ a:hover { text-decoration: underline; }
   padding: 0;
   flex-shrink: 0;
 }
+.dropdown .row .audio-btn svg,
+.wotd .audio-btn svg { width: 44%; height: 44%; display: block; }
 .dropdown .footer {
   display: flex;
   justify-content: space-between;

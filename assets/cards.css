@@ -105,6 +105,8 @@
   padding: 0;
   margin-left: auto;
 }
+.entry .audio-btn svg { width: 58%; height: 58%; display: block; }
+.entry .example .ex-audio svg { width: 60%; height: 60%; display: block; }
 .entry .gloss {
   font-size: 13px;
   color: var(--ink);

@@ -200,6 +200,14 @@
     return e;
   }
 
+  // Speaker-with-soundwaves icon (monochrome, inherits the button's color).
+  const AUDIO_SVG =
+    '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+      '<path d="M3.2 6.2h2L8 4v8L5.2 9.8h-2z" fill="currentColor"/>' +
+      '<path d="M10.4 6.1a2.6 2.6 0 0 1 0 3.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+      '<path d="M12.1 4.6a5 5 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+    '</svg>';
+
   function renderCard(entry, pictureSrc) {
     const card = el('article', 'entry');
     if (entry.id) card.id = entry.id;
@@ -216,10 +224,11 @@
     if (entry.deva) head.appendChild(el('span', 'deva', entry.deva));
     if (entry.pos) head.appendChild(el('span', 'pos', entry.pos));
     if (entry.audioMain) {
-      const btn = el('button', 'audio-btn', '▶');
+      const btn = el('button', 'audio-btn');
       btn.type = 'button';
       btn.setAttribute('aria-label', 'Play pronunciation');
       btn.dataset.audio = entry.audioMain;
+      btn.innerHTML = AUDIO_SVG;
       head.appendChild(btn);
     }
     body.appendChild(head);
@@ -249,10 +258,11 @@
       line1.appendChild(el('span', 'ex-ipa', ex.ipa));
       if (ex.deva) line1.appendChild(el('span', 'ex-deva', ex.deva));
       if (ex.audio) {
-        const exBtn = el('button', 'ex-audio', '▶');
+        const exBtn = el('button', 'ex-audio');
         exBtn.type = 'button';
         exBtn.setAttribute('aria-label', 'Play example audio');
         exBtn.dataset.audio = ex.audio;
+        exBtn.innerHTML = AUDIO_SVG;
         line1.appendChild(exBtn);
       }
       exDiv.appendChild(line1);

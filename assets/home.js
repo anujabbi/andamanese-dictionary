@@ -13,6 +13,14 @@
   // biriu "dirty water", coboŋ "forest", ɖiu "hot; sunny" — all have audio.
   const SUGGESTED_IDS = ['e418', 'e711', 'e886'];
 
+  // Speaker-with-soundwaves icon (monochrome, inherits the button's color).
+  const AUDIO_SVG =
+    '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
+      '<path d="M3.2 6.2h2L8 4v8L5.2 9.8h-2z" fill="currentColor"/>' +
+      '<path d="M10.4 6.1a2.6 2.6 0 0 1 0 3.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+      '<path d="M12.1 4.6a5 5 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+    '</svg>';
+
   // ---------- State ----------
   let INDEX = null;            // resolved array once loaded
   let pending = null;          // most recent query while index was loading
@@ -110,7 +118,7 @@
     const catHtml  = entry.cat  ? '<span class="cat">' + escapeHtml(entry.cat) + '</span>' : '';
     const gloss = [enHtml, hiHtml].filter(Boolean).join(' · ');
     const audioBtn = entry.audio
-      ? '<button class="audio-btn" type="button" data-audio="' + escapeHtml(audioUrl(entry)) + '" aria-label="Play audio">▶</button>'
+      ? '<button class="audio-btn" type="button" data-audio="' + escapeHtml(audioUrl(entry)) + '" aria-label="Play audio">' + AUDIO_SVG + '</button>'
       : '';
     return (
       '<div class="row' + (isActive ? ' active' : '') + '" role="option" data-href="' + escapeHtml(entryUrl(entry)) + '" data-id="' + escapeHtml(entry.id) + '">' +
@@ -343,7 +351,7 @@
     const el = document.getElementById('wotd');
     const gloss = [entry.en, entry.hi].filter(Boolean).join(' · ');
     const audio = entry.audio
-      ? '<button class="audio-btn" type="button" data-audio="' + escapeHtml(audioUrl(entry)) + '" aria-label="Play audio">▶</button>'
+      ? '<button class="audio-btn" type="button" data-audio="' + escapeHtml(audioUrl(entry)) + '" aria-label="Play audio">' + AUDIO_SVG + '</button>'
       : '';
     el.innerHTML =
       '<div class="body">' +
