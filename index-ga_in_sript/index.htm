@@ -19,7 +19,10 @@
 </div>
 <script>
   document.addEventListener('ga:chromeready', function () {
-    window.GABrowse.initIndexPage({ base: '../' });
+    window.GABrowse.initIndexPage({ base: '../', section: 'devanagari', scripts: [
+      { key: 'dev', label: 'देव', mode: 'native' },
+      { key: 'ipa', label: 'a–z', mode: 'alt', requires: 'deva', termField: 'deva', groupBy: 'file', order: 'ipa', sortKey: 'ipa' }
+    ]});
   });
 </script>
 </body></html>

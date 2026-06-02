@@ -48,13 +48,26 @@
     return rows;
   }
 
+  // --- collation (browser copy; orders come from assets/collation-data.json) ---
+  function firstLetterIn(text, orderSet) {
+    var s = String(text || '');
+    for (var i = 0; i < s.length; i++) { if (orderSet.has(s[i])) return s[i]; }
+    return '';
+  }
+
   // Two-pane reverse-index page controller.
-  // cfg = { base } ; the page provides #ilist and #pane, and same-dir alphalinks.htm + NN.htm.
+  // cfg = { base, scripts:[{key,label,mode:'native'|'alt', requires?, termField?, groupBy?, order?, sortKey?}] }
+  // The page provides #ilist and #pane, and same-dir alphalinks.htm + NN.htm.
   function initIndexPage(cfg) {
     var base = cfg.base || '';
     var ilist = document.getElementById('ilist');
     var pane = document.getElementById('pane');
-    var index = null; // search-index.json, for filtering + hash lookup
+    var scripts = cfg.scripts && cfg.scripts.length ? cfg.scripts : [{ key: 'native', label: 'A–Z', mode: 'native' }];
+    var mode = scripts[0];
+    var index = null;            // search-index.json
+    var collation = null;        // { devGa:[], hindi:[] }
+    var lexLetters = null;       // [{file,label}] for IPA grouping
+    var alpha = [];              // native letters [{label,file}] from alphalinks.htm
 
     function qualifies(e, f, val) {
       if (f === 'morph') return !!e.morph;
@@ -84,7 +97,7 @@
       try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; }
     }
 
-    function renderList(rows) {
+    function renderRows(rows) {
       ilist.innerHTML = '';
       rows.forEach(function (r) {
         var a = document.createElement('a');
@@ -98,36 +111,98 @@
       applyListFilter();
     }
 
-    function loadLetter(file) {
-      return fetch(file).then(function (r) { return r.text(); }).then(function (h) { renderList(parseRows(h)); });
+    // ----- native mode (existing per-letter tables) -----
+    function loadNativeLetter(file) {
+      return fetch(file).then(function (r) { return r.text(); }).then(function (h) { renderRows(parseRows(h)); });
     }
 
-    // Build letter row from this section's alphalinks.htm.
-    fetch('alphalinks.htm').then(function (r) { return r.text(); }).then(function (html) {
-      var letters = parseLetterLinks(html);
-      window.GAChrome.renderLetterRow({
-        letters: letters.map(function (L, i) { return { label: L.label, key: L.file, active: i === 0 }; }),
+    // ----- alt mode (search-index driven) -----
+    function altOrder() { return mode.order === 'ipa' ? lexLetters.map(function (l) { return l.label; }) : collation[mode.order]; }
+    function letterForFile(file) {
+      for (var i = 0; i < lexLetters.length; i++) if (lexLetters[i].file === file) return lexLetters[i].label;
+      return '';
+    }
+    function altGroupOf(e) {
+      if (mode.groupBy === 'file') return letterForFile(e.file);
+      return firstLetterIn(e[mode.groupBy], new Set(altOrder()));
+    }
+    function altEntries() { return index.filter(function (e) { return e[mode.requires]; }); }
+    function showAltGroup(label) {
+      var order = altOrder();
+      var rows = altEntries().filter(function (e) { return altGroupOf(e) === label; });
+      rows.sort(function (a, b) { return String(a[mode.sortKey] || '').localeCompare(String(b[mode.sortKey] || '')); });
+      renderRows(rows.map(function (e) {
+        return { term: e[mode.termField] || e.ipa, ipa: e.ipa, file: e.file, id: e.id };
+      }));
+    }
+
+    function buildToggle() {
+      if (scripts.length < 2) return null;
+      var seg = window.GAChrome.buildScriptToggle(
+        scripts.map(function (s) { return { key: s.key, label: s.label }; }),
+        function (key) { setMode(key); }
+      );
+      // reflect current mode as active
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+        b.classList.toggle('active', b.dataset.key === mode.key);
       });
+      return seg;
+    }
+
+    function renderForMode() {
+      var letters;
+      if (mode.mode === 'native') {
+        letters = alpha.map(function (L, i) { return { label: L.label, key: 'native:' + L.file, active: i === 0 }; });
+      } else {
+        var order = altOrder();
+        var present = {};
+        altEntries().forEach(function (e) { var g = altGroupOf(e); if (g) present[g] = 1; });
+        letters = order.filter(function (l) { return present[l]; })
+          .map(function (l, i) { return { label: l, key: 'alt:' + l, active: i === 0 }; });
+      }
+      window.GAChrome.renderLetterRow({ letters: letters, toggle: buildToggle() });
       var bar = document.querySelector('nav.letterbar');
       bar.addEventListener('click', function (e) {
         var a = e.target.closest('a[data-key]'); if (!a) return; e.preventDefault();
         Array.prototype.forEach.call(bar.querySelectorAll('a'), function (x) { x.classList.remove('active'); });
         a.classList.add('active');
-        loadLetter(a.dataset.key);
+        var k = a.dataset.key;
+        if (k.indexOf('native:') === 0) loadNativeLetter(k.slice(7));
+        else showAltGroup(k.slice(4));
       });
-      if (letters.length) loadLetter(letters[0].file);
-    });
+      // load first group/letter
+      if (letters.length) {
+        if (mode.mode === 'native') loadNativeLetter(letters[0].key.slice(7));
+        else showAltGroup(letters[0].key.slice(4));
+      }
+    }
 
-    // Load index for filtering; if the URL has #eNNN, pre-select that entry.
-    fetch(base + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
-      index = idx;
-      applyListFilter();
+    function setMode(key) {
+      mode = scripts.filter(function (s) { return s.key === key; })[0] || scripts[0];
+      try { sessionStorage.setItem('ga.script.' + cfg.section, key); } catch (e) {}
+      renderForMode();
+    }
+
+    // Load everything we need, then render.
+    Promise.all([
+      fetch('alphalinks.htm').then(function (r) { return r.text(); }).then(parseLetterLinks),
+      fetch(base + 'assets/search-index.json').then(function (r) { return r.json(); }),
+      fetch(base + 'assets/collation-data.json').then(function (r) { return r.json(); }),
+      fetch(base + 'assets/lexicon-letters.json').then(function (r) { return r.json(); }),
+    ]).then(function (res) {
+      alpha = res[0]; index = res[1]; collation = res[2]; lexLetters = res[3];
+      // restore saved script mode
+      var saved = readLS('ga.script.' + cfg.section);
+      var savedMode = scripts.filter(function (s) { return s.key === saved; })[0];
+      if (savedMode) mode = savedMode;
+      renderForMode();
+      // deep-link
       var hash = (location.hash || '').replace('#', '');
       if (/^e\d+$/.test(hash)) {
-        var hit = idx.filter(function (e) { return e.id === hash; })[0];
+        var hit = index.filter(function (e) { return e.id === hash; })[0];
         if (hit) showEntry(hit.file, hit.id);
       }
-    }).catch(function (e) { console.warn('browse.js: index load failed', e); });
+    }).catch(function (e) { console.warn('browse.js: initIndexPage load failed', e); });
 
     document.addEventListener('ga:filterchange', applyListFilter);
   }

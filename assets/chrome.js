@@ -105,8 +105,31 @@
     return bar;
   }
 
+  // Build a script-toggle control (.scriptseg). options = [{key,label}]; calls
+  // onPick(key) when a button is chosen. Returns the element (first option active).
+  function buildScriptToggle(options, onPick) {
+    var seg = document.createElement('span');
+    seg.className = 'scriptseg';
+    options.forEach(function (o, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o.label;
+      b.dataset.key = o.key;
+      if (i === 0) b.className = 'active';
+      b.addEventListener('click', function () {
+        if (b.classList.contains('active')) return;
+        Array.prototype.forEach.call(seg.querySelectorAll('button'), function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        onPick(o.key);
+      });
+      seg.appendChild(b);
+    });
+    return seg;
+  }
+
   // Public hook surface used by page-specific bootstraps and browse.js.
   window.GAChrome = {
+    buildScriptToggle: buildScriptToggle,
     config: CFG,
     base: B,
     headerEl: function () { return document.querySelector('header.ga-chrome'); },
