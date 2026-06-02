@@ -49,19 +49,11 @@
     return escapeHtml(before) + '<mark>' + escapeHtml(match) + '</mark>' + escapeHtml(after);
   }
 
-  function etymSource(v) {
-    return v ? String(v).split(/[;,]/)[0].trim() : '';
-  }
-
-  function searchIndex(query, index, filter, value) {
+  function searchIndex(query, index) {
     const q = query.trim().toLowerCase();
     if (!q || !index) return [];
     const scored = [];
     for (const e of index) {
-      if (filter === 'etym' && !e.etym) continue;
-      if (filter === 'etym' && value && etymSource(e.etym) !== value) continue;
-      if (filter === 'morph' && !e.morph) continue;
-      if (filter === 'env' && !e.env) continue;
       let score = 0;
       let field = null;
       if (e.ipa && e.ipa.toLowerCase().startsWith(q))      { score = 100; field = 'ipa'; }
@@ -198,23 +190,11 @@
 
   // ---------- Wiring ----------
 
-  function activeFilter() {
-    const sel = document.getElementById('ga-scope');
-    const v = sel ? sel.value : '';
-    return (v === 'etym' || v === 'morph' || v === 'env') ? v : '';
-  }
-
-  function activeFilterValue() {
-    if (activeFilter() !== 'etym') return '';
-    const sel = document.getElementById('ga-scope-value');
-    return sel ? (sel.value || '') : '';
-  }
-
   function onInput() {
     const q = document.getElementById('q').value;
     if (!q.trim()) { renderEmptyState(); return; }
     if (!INDEX) { pending = q; return; }
-    const results = searchIndex(q, INDEX, activeFilter(), activeFilterValue());
+    const results = searchIndex(q, INDEX);
     renderDropdown(results, q);
   }
 
@@ -408,69 +388,10 @@
     document.addEventListener('click', onDocumentClick);
   }
 
-  function etymSources(index) {
-    const set = {};
-    for (const e of index) { if (e.etym) { const s = etymSource(e.etym); if (s) set[s] = 1; } }
-    return Object.keys(set).sort();
-  }
-
-  function populateScopeValues() {
-    const sel = document.getElementById('ga-scope-value');
-    if (!sel || !INDEX) return;
-    let cur = '';
-    try { cur = sessionStorage.getItem('ga.filter.value') || ''; } catch (e) { /* ignore */ }
-    const sources = etymSources(INDEX);
-    sel.innerHTML = '';
-    const o0 = document.createElement('option');
-    o0.value = ''; o0.textContent = 'All sources';
-    sel.appendChild(o0);
-    for (const s of sources) {
-      const o = document.createElement('option');
-      o.value = s; o.textContent = s;
-      sel.appendChild(o);
-    }
-    sel.value = cur;
-  }
-
-  function syncScopeValueVisibility() {
-    const sel = document.getElementById('ga-scope-value');
-    if (sel) sel.hidden = activeFilter() !== 'etym';
-  }
-
-  function bindScope() {
-    const sel = document.getElementById('ga-scope');
-    if (!sel) return;
-    try {
-      const v = sessionStorage.getItem('ga.filter');
-      if (v === 'etym' || v === 'morph' || v === 'env') sel.value = v;
-    } catch (e) { /* ignore */ }
-    syncScopeValueVisibility();
-    sel.addEventListener('change', function () {
-      try {
-        sessionStorage.setItem('ga.filter', activeFilter());
-        sessionStorage.setItem('ga.filter.value', '');
-      } catch (e) { /* ignore */ }
-      const vsel = document.getElementById('ga-scope-value');
-      if (vsel) vsel.value = '';
-      syncScopeValueVisibility();
-      onInput();
-    });
-    const vsel = document.getElementById('ga-scope-value');
-    if (vsel) {
-      vsel.addEventListener('change', function () {
-        try { sessionStorage.setItem('ga.filter.value', vsel.value || ''); } catch (e) { /* ignore */ }
-        onInput();
-      });
-    }
-  }
-
   function init() {
     bindSearchBox();
-    bindScope();
     document.getElementById('wotd').addEventListener('click', onWotdClick);
     loadIndex().then(() => {
-      populateScopeValues();
-      syncScopeValueVisibility();
       if (pending && pending === document.getElementById('q').value) {
         onInput();
       }
