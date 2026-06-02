@@ -130,11 +130,17 @@ export function isEnvironmental(rawCategory) {
   return ENV_CATEGORIES.has(cleanGloss(rawCategory));
 }
 
-// `block` is a full <p class="lpLexEntryPara">…</p> string.
+// `block` is a full <p class="lpLexEntryPara">…</p> string. An entry may carry
+// several semantic-domain categories; tag it if ANY of them is environmental
+// (the environmental category is not always the first one).
 export function tagBlock(block) {
   if (block.includes('class="lpEnvLex"')) return block; // idempotent
-  const m = block.match(/<span class="lpCategory">([^<]*)<\/span>/);
-  if (!m || !isEnvironmental(m[1])) return block;
+  const cats = block.matchAll(/<span class="lpCategory">([^<]*)<\/span>/g);
+  let isEnv = false;
+  for (const m of cats) {
+    if (isEnvironmental(m[1])) { isEnv = true; break; }
+  }
+  if (!isEnv) return block;
   const close = block.lastIndexOf('</p>');
   return block.slice(0, close) + '<span class="lpEnvLex">Environmental</span>' + block.slice(close);
 }
@@ -292,8 +298,8 @@ This is the large mechanical data change (~1,414 entries). It is generated, not 
 - [ ] **Step 1: Run the tagging script**
 
 Run: `node scripts/tag-environmental.mjs`
-Expected: per-file counts ending with `Done. Tagged 1414 environmental entries.`
-(The exact number may shift if lexicon content changed; it should be ~1,400.)
+Expected: per-file counts ending with `Done. Tagged 1359 environmental entries.`
+(Exact number may shift if lexicon content changed.)
 
 - [ ] **Step 2: Spot-check the diff**
 
@@ -311,16 +317,16 @@ Run: `git diff --stat lexicon/` → no changes since Step 1.
 - [ ] **Step 4: Regenerate the search index**
 
 Run: `node scripts/build-search-index.mjs`
-Expected: `Wrote 3753 entries to …/assets/search-index.json`.
+Expected: `Wrote 3734 entries to …/assets/search-index.json`.
 
 - [ ] **Step 5: Confirm env entries are present in the index**
 
 Run: `node -e "const a=require('./assets/search-index.json');console.log(a.filter(e=>e.env).length)"`
-Expected: ~1,414 (matches Step 1's count).
+Expected: 1359 (matches Step 1's count).
 
 - [ ] **Step 6: Run the full test suite**
 
-Run: `node --test scripts/tests/`
+Run: `node --test scripts/tests/tag-environmental.test.mjs scripts/tests/build-search-index.test.mjs` (the bare-directory form `node --test scripts/tests/` is misparsed on this Node/Windows setup)
 Expected: PASS — all tests green.
 
 - [ ] **Step 7: Commit**
@@ -434,13 +440,13 @@ git commit -m "style: render Environmental tag as a pill (#3)"
 
 - [ ] **Step 1: Full test suite green**
 
-Run: `node --test scripts/tests/`
+Run: `node --test scripts/tests/tag-environmental.test.mjs scripts/tests/build-search-index.test.mjs` (the bare-directory form `node --test scripts/tests/` is misparsed on this Node/Windows setup)
 Expected: all tests PASS.
 
 - [ ] **Step 2: Index integrity**
 
 Run: `node -e "const a=require('./assets/search-index.json');console.log('total',a.length,'env',a.filter(e=>e.env).length)"`
-Expected: `total 3753 env ~1414`.
+Expected: `total 3734 env 1359`.
 
 - [ ] **Step 3: Re-run tagging is a no-op (final idempotency check)**
 

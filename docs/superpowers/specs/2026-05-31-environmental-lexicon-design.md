@@ -55,9 +55,15 @@ Total: **~1,414 of 3,753 entries (~38%)**. In HTML, `&` appears as `&amp;`; the 
 are compared after entity decoding (or the canonical list stores the `&amp;` form — see
 implementation note).
 
-Matching is **exact equality** against the first (English) `lpCategory` of each entry — NOT
-substring `includes()`. Substring matching is what made the reverted attempt silently miss
+Matching is **exact equality** against the decoded English `lpCategory` labels of each entry —
+NOT substring `includes()`. Substring matching is what made the reverted attempt silently miss
 `edible item`, `supernatural`, `hunting & gathering`, and `insect & invertebrate`.
+
+**An entry may carry more than one semantic domain.** ~148 entries have multiple `lpCategory`
+pairs, and 38 environmental entries have their environmental category in a *non-first* position
+(e.g. a word tagged both `tool` and `fish`). The tag is applied if **any** of an entry's
+categories is environmental — tagging only the first category would silently miss those 38.
+Final tagged count: **1,359** of 3,734 indexed entries.
 
 ## Components
 
