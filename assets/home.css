@@ -289,15 +289,17 @@ a:hover { text-decoration: underline; }
   flex-shrink: 0;
 }
 
-/* Community portrait */
+/* Community portrait (sits above the search bar) */
 .portrait {
-  margin: 52px auto 0;
+  margin: 4px auto 30px;
   max-width: 540px;
 }
 .portrait img {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
+  aspect-ratio: 1280 / 597;
   border-radius: 14px;
   border: 1px solid var(--rule);
   box-shadow: 0 8px 24px rgba(80, 55, 20, 0.12);
@@ -338,6 +340,6 @@ a:hover { text-decoration: underline; }
   .wotd .word { font-size: 18px; }
   .wotd .gloss { font-size: 11px; }
   .dropdown .row .ipa { font-size: 15px; }
-  .portrait { margin-top: 32px; }
+  .portrait { margin: 2px auto 22px; }
   .portrait figcaption { font-size: 11px; }
 }

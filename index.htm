@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Great Andamanese — Dictionary</title>
-  <link rel="stylesheet" href="assets/home.css"/>
+  <link rel="stylesheet" href="assets/home.css?v=2"/>
 </head>
 <body>
   <header class="topbar">
@@ -14,6 +14,13 @@
   <main class="hero">
     <h1 class="brand">Great Andamanese</h1>
     <p class="tagline">A trilingual record of an endangered language</p>
+
+    <figure class="portrait">
+      <img src="assets/andamanese-community.jpg" width="1280" height="597"
+           alt="Members of the Great Andamanese community standing together outside a home in the Andaman Islands"
+           decoding="async"/>
+      <figcaption>The Great Andamanese community — the speakers this dictionary records</figcaption>
+    </figure>
 
     <form class="search-form" role="search" action="lexicon/index.htm">
       <div class="search-wrap">
@@ -49,13 +56,6 @@
     <section id="wotd" class="wotd" hidden aria-label="Word of the day">
       <!-- populated by home.js -->
     </section>
-
-    <figure class="portrait">
-      <img src="assets/andamanese-community.jpg" width="959" height="423"
-           alt="Members of the Great Andamanese community standing together outside a home in the Andaman Islands"
-           loading="lazy" decoding="async"/>
-      <figcaption>The Great Andamanese community — the speakers this dictionary records</figcaption>
-    </figure>
   </main>
 
   <script src="assets/home.js" defer></script>
