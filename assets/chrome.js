@@ -149,6 +149,20 @@
     s.setProperty('--chrome-top-lb', (H + F + L) + 'px');
   }
 
+  // Re-align a #eN deep link once chrome + cards have rendered. The browser's
+  // load-time scroll fires before the sticky bars are measured, so the entry
+  // ends up hidden under them (worse on mobile, where the bars wrap taller);
+  // scrolling again now that --chrome-top-lb (the entry's scroll-margin) is set
+  // lands it just below the chrome.
+  function scrollToHash() {
+    var id = (location.hash || '').replace(/^#/, '');
+    if (!/^e\d+$/.test(id)) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    measureChrome();
+    requestAnimationFrame(function () { el.scrollIntoView({ block: 'start' }); });
+  }
+
   // Build/replace the top letter row under the header.
   // opts = { letters: [{label, href?, key?, active?}], toggle?: HTMLElement }
   function renderLetterRow(opts) {
@@ -290,6 +304,7 @@
       lexMap = res[0]; index = res[1]; collation = res[2];
       var saved = ''; try { saved = sessionStorage.getItem('ga.script.lexicon') || ''; } catch (e) {}
       if (saved === 'dev') showDev(); else showIpa();
+      scrollToHash();
     }).catch(function (e) { console.warn('chrome.js: lexicon init failed', e); });
   }
 

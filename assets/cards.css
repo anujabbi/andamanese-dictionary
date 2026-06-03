@@ -54,6 +54,9 @@
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 14px;
+  /* When linked to via #eN, keep the entry clear of the sticky header +
+     filter bar + letter row (height measured into --chrome-top-lb by chrome.js). */
+  scroll-margin-top: calc(var(--chrome-top-lb, 150px) + 12px);
 }
 .entry.fragment {
   background: var(--hi);
