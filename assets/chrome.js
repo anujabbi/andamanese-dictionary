@@ -7,7 +7,7 @@
 
   var NAV = [
     ['lexicon',    'Lexicon',    B + 'lexicon/index.htm'],
-    ['devanagari', 'Devanagari', B + 'index-ga_in_sript/index.htm'],
+    ['devanagari', 'Andamanese', B + 'index-ga_in_sript/index.htm'],
     ['english',    'English',    B + 'index-english/index.htm'],
     ['hindi',      'Hindi',      B + 'index-hindi/index.htm'],
     ['categories', 'Categories', B + 'categories/index.htm'],
