@@ -33,8 +33,6 @@
       nav.appendChild(a);
     });
     hdr.appendChild(nav);
-    hdr.appendChild(el('span', 'spacer'));
-    hdr.appendChild(buildScope());
     return hdr;
   }
 
@@ -44,65 +42,119 @@
     return o;
   }
 
-  var mainSel, srcSel;
-  function buildScope() {
-    var wrap = el('span', 'scope');
-    wrap.appendChild(el('label', null, 'Show'));
-    mainSel = el('select', 'scope-main');
-    [['', 'All entries'], ['etym', 'ETYM'], ['morph', 'MORPH'], ['env', 'ENV']]
-      .forEach(function (p) { mainSel.appendChild(opt(p[0], p[1])); });
+  var pillBar, srcSel, countEls = {};
+  var FACETS = [['', 'All'], ['etym', 'Etymology'], ['morph', 'Morphology'], ['env', 'Environment']];
+
+  // A sub-bar of single-select facet pills + the ETYM source dropdown. Writes the
+  // same sessionStorage keys / fires the same ga:filterchange event as before, so
+  // browse.js / filter.js / cards.js consume it unchanged.
+  function buildFilterBar() {
+    var bar = el('nav', 'filterbar');
+    bar.appendChild(el('span', 'flab', 'Show'));
+    FACETS.forEach(function (f) {
+      var b = el('button', 'pill'); b.type = 'button'; b.dataset.val = f[0];
+      b.appendChild(document.createTextNode(f[1]));
+      if (f[0]) {
+        var c = el('span', 'ct'); countEls[f[0]] = c; b.appendChild(c);
+        b.title = 'across the whole dictionary';
+      }
+      b.addEventListener('click', function () { selectFacet(f[0]); });
+      bar.appendChild(b);
+    });
     srcSel = el('select', 'scope-src');
-    wrap.appendChild(mainSel); wrap.appendChild(srcSel);
-    return wrap;
+    srcSel.addEventListener('change', onSrcChange);
+    bar.appendChild(srcSel);
+    pillBar = bar;
+    return bar;
+  }
+
+  function reflectActive(val) {
+    if (!pillBar) return;
+    Array.prototype.forEach.call(pillBar.querySelectorAll('.pill'), function (b) {
+      b.classList.toggle('active', b.dataset.val === val);
+    });
   }
 
   function readLS(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function writeLS(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function etymSource(v) { return v ? String(v).split(/[;,]/)[0].trim() : ''; }
 
-  // Fill the ETYM "source" dropdown with the distinct etymology sources in the index.
-  function populateSources() {
+  // From search-index.json: fill the facet counts (whole-dictionary totals) and the
+  // ETYM "source" dropdown with the distinct etymology sources.
+  function loadIndexMeta() {
     fetch(B + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
-      var set = {};
-      idx.forEach(function (e) { if (e.etym) { var s = etymSource(e.etym); if (s) set[s] = 1; } });
+      var set = {}, n = { etym: 0, morph: 0, env: 0 };
+      idx.forEach(function (e) {
+        if (e.etym) { n.etym++; var s = etymSource(e.etym); if (s) set[s] = 1; }
+        if (e.morph) n.morph++;
+        if (e.env) n.env++;
+      });
+      Object.keys(countEls).forEach(function (k) { if (countEls[k]) countEls[k].textContent = String(n[k] || 0); });
       var cur = readLS('ga.filter.value');
       srcSel.innerHTML = '';
       srcSel.appendChild(opt('', 'All sources'));
       Object.keys(set).sort().forEach(function (s) { srcSel.appendChild(opt(s, s)); });
       srcSel.value = cur;
-    }).catch(function (e) { console.warn('chrome.js: source list failed', e); });
+      measureChrome();
+    }).catch(function (e) { console.warn('chrome.js: index meta failed', e); });
   }
 
-  function syncSrcVisibility() { srcSel.hidden = mainSel.value !== 'etym'; }
+  function syncSrcVisibility() { if (srcSel) srcSel.hidden = readLS('ga.filter') !== 'etym'; }
 
   function restore() {
     var f = readLS('ga.filter');
-    if (f === 'etym' || f === 'morph' || f === 'env') mainSel.value = f;
+    if (f !== 'etym' && f !== 'morph' && f !== 'env') f = '';
+    reflectActive(f);
     if (!srcSel.options.length) srcSel.appendChild(opt('', 'All sources'));
     syncSrcVisibility();
     srcSel.value = readLS('ga.filter.value');
   }
 
-  function onChange() {
-    writeLS('ga.filter', mainSel.value);
-    if (mainSel.value !== 'etym') { writeLS('ga.filter.value', ''); srcSel.value = ''; }
+  function selectFacet(val) {
+    writeLS('ga.filter', val);
+    if (val !== 'etym') { writeLS('ga.filter.value', ''); srcSel.value = ''; }
     else writeLS('ga.filter.value', srcSel.value || '');
+    reflectActive(val);
     syncSrcVisibility();
+    document.dispatchEvent(new CustomEvent('ga:filterchange'));
+  }
+
+  function onSrcChange() {
+    writeLS('ga.filter.value', srcSel.value || '');
     document.dispatchEvent(new CustomEvent('ga:filterchange'));
   }
 
   function init() {
     document.body.insertBefore(buildHeader(), document.body.firstChild);
+    var hdr = document.querySelector('header.ga-chrome');
+    hdr.parentNode.insertBefore(buildFilterBar(), hdr.nextSibling);
     restore();
-    mainSel.addEventListener('change', onChange);
-    srcSel.addEventListener('change', onChange);
+    measureChrome();
+    window.addEventListener('resize', measureChrome);
+  }
+
+  // Publish the stacked sticky-chrome heights as CSS vars so the letter row and the
+  // two-pane lists sit flush under the (variable-height) header + filter bar, without
+  // hardcoded offsets that break when the header wraps on narrow screens.
+  function measureChrome() {
+    var hdr = document.querySelector('header.ga-chrome');
+    var fbar = document.querySelector('nav.filterbar');
+    var lbar = document.querySelector('nav.letterbar');
+    var H = hdr ? hdr.offsetHeight : 0;
+    var F = fbar ? fbar.offsetHeight : 0;
+    var L = lbar ? lbar.offsetHeight : 0;
+    var s = document.documentElement.style;
+    s.setProperty('--hdr-h', H + 'px');
+    s.setProperty('--chrome-top', (H + F) + 'px');
+    s.setProperty('--chrome-top-lb', (H + F + L) + 'px');
   }
 
   // Build/replace the top letter row under the header.
   // opts = { letters: [{label, href?, key?, active?}], toggle?: HTMLElement }
   function renderLetterRow(opts) {
     var hdr = document.querySelector('header.ga-chrome');
-    var existing = hdr.nextElementSibling;
+    var anchor = document.querySelector('nav.filterbar') || hdr; // letter row sits below the filter bar
+    var existing = anchor.nextElementSibling;
     if (existing && existing.classList.contains('letterbar')) existing.remove();
     var bar = document.createElement('nav');
     bar.className = 'letterbar' + (opts.toggle ? ' labeled' : '');
@@ -115,7 +167,8 @@
       if (L.active) a.className = 'active';
       bar.appendChild(a);
     });
-    hdr.parentNode.insertBefore(bar, hdr.nextSibling);
+    anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    measureChrome();
     return bar;
   }
 
@@ -147,8 +200,6 @@
     config: CFG,
     base: B,
     headerEl: function () { return document.querySelector('header.ga-chrome'); },
-    mainSelect: function () { return mainSel; },
-    sourceSelect: function () { return srcSel; },
     renderLetterRow: renderLetterRow,
     onReady: function (fn) { document.addEventListener('ga:chromeready', fn); },
   };
@@ -244,7 +295,7 @@
 
   function start() {
     init();
-    populateSources();
+    loadIndexMeta();
     document.dispatchEvent(new CustomEvent('ga:chromeready'));
     if (CFG.section === 'lexicon') initLexicon();
   }

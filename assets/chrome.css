@@ -12,19 +12,27 @@
 .hdr nav a{font-size:13px;color:var(--ink-soft);padding:6px 11px;border-radius:8px;text-decoration:none;}
 .hdr nav a:hover{background:var(--paper-2);color:var(--accent);}
 .hdr nav a.active{background:var(--accent);color:#fff;}
-.hdr .spacer{flex:1;}
 
-/* ---- Show filter (room for the ETYM source sub-dropdown) ---- */
-.scope{display:inline-flex;align-items:center;gap:9px;background:#fff;
-  border:1px solid var(--accent-soft);border-radius:12px;padding:5px 10px 5px 13px;}
-.scope label{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-mute);}
-.scope select{border:none;background:transparent;font-family:var(--sans);font-size:13px;
-  color:var(--ink);outline:none;cursor:pointer;padding:2px 2px;min-width:104px;}
-.scope .scope-src{border-left:1px solid #e6dcc4;padding-left:9px;min-width:118px;color:var(--accent);}
-.scope .scope-src[hidden]{display:none;}
+/* ---- Show filter: single-select facet pills + ETYM source dropdown ----
+   Sticky sub-bar directly under the header. Sticky offsets for the panes below
+   come from --chrome-top / --chrome-top-lb, measured in chrome.js (measureChrome). */
+.filterbar{position:sticky;top:var(--hdr-h,57px);z-index:18;display:flex;flex-wrap:nowrap;
+  align-items:center;gap:8px;padding:9px 18px;background:var(--paper-2);
+  border-bottom:1px solid #e7dcc2;overflow-x:auto;}
+.filterbar .flab{flex:0 0 auto;font-size:9px;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--ink-mute);margin-right:2px;}
+.filterbar .pill{flex:0 0 auto;font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);
+  background:#fff;border:1px solid #e1d4b4;border-radius:999px;padding:5px 13px;cursor:pointer;white-space:nowrap;}
+.filterbar .pill:hover{border-color:var(--accent-soft);color:var(--accent);}
+.filterbar .pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.filterbar .pill .ct{font-size:10px;opacity:.65;margin-left:6px;}
+.filterbar .pill.active .ct{opacity:.85;}
+.filterbar .scope-src{flex:0 0 auto;margin-left:6px;border:1px solid #e1d4b4;border-radius:8px;
+  background:#fff;font-family:var(--sans);font-size:12.5px;color:var(--accent);padding:4px 8px;cursor:pointer;outline:none;}
+.filterbar .scope-src[hidden]{display:none;}
 
 /* ---- top letter row + script toggle ---- */
-.letterbar{position:sticky;top:57px;z-index:15;display:flex;flex-wrap:nowrap;gap:2px;justify-content:center;
+.letterbar{position:sticky;top:var(--chrome-top,99px);z-index:15;display:flex;flex-wrap:nowrap;gap:2px;justify-content:center;
   align-items:center;padding:8px 16px;background:rgba(251,246,236,.92);backdrop-filter:blur(6px);
   border-bottom:1px solid #e7dcc2;overflow-x:auto;}
 .letterbar.labeled{justify-content:flex-start;}
@@ -40,7 +48,7 @@
 
 /* ---- two-pane index (term list + entry) ---- */
 .layout{display:flex;}
-.idx{position:sticky;top:101px;align-self:flex-start;height:calc(100vh - 101px);overflow:auto;
+.idx{position:sticky;top:var(--chrome-top-lb,143px);align-self:flex-start;height:calc(100vh - var(--chrome-top-lb,143px));overflow:auto;
   width:340px;border-right:1px solid #e7dcc2;background:var(--paper);}
 .idx .ttl{font-family:var(--serif);font-size:15px;color:var(--ink);padding:14px 16px 10px;border-bottom:1px solid #eadfc6;}
 .ilist a{display:flex;justify-content:space-between;gap:12px;padding:9px 16px;
@@ -54,7 +62,7 @@
 .pane .cards{max-width:680px;margin:0 auto;padding-top:6px;}
 
 /* ---- categories left list ---- */
-.catlist{position:sticky;top:57px;align-self:flex-start;height:calc(100vh - 57px);overflow:auto;
+.catlist{position:sticky;top:var(--chrome-top,99px);align-self:flex-start;height:calc(100vh - var(--chrome-top,99px));overflow:auto;
   width:260px;border-right:1px solid #e7dcc2;background:var(--paper);padding:12px 0;}
 .catlist .ttl{font-family:var(--serif);font-size:14px;color:var(--ink-mute);padding:4px 18px 10px;
   text-transform:uppercase;letter-spacing:.5px;}
@@ -68,4 +76,5 @@
   .idx,.catlist{position:static;width:auto;height:auto;max-height:40vh;border-right:none;border-bottom:1px solid #e7dcc2;}
   .hdr{gap:10px;padding:10px 14px;}
   .hdr nav a{padding:5px 8px;}
+  .filterbar{padding:8px 12px;gap:6px;}
 }
