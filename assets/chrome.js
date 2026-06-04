@@ -36,34 +36,28 @@
     return hdr;
   }
 
-  function opt(value, label, sel) {
-    var o = document.createElement('option');
-    o.value = value; o.textContent = label; if (sel) o.selected = true;
-    return o;
-  }
-
-  var pillBar, srcSel, countEls = {};
+  var pillBar, countEls = {}, etymPill, etymLabelEl;
+  var srcPop, sources = {}, srcOrder = [], totalEtym = 0;
   var FACETS = [['', 'All'], ['etym', 'Etymology'], ['morph', 'Morphology'], ['env', 'Environment']];
 
-  // A sub-bar of single-select facet pills + the ETYM source dropdown. Writes the
-  // same sessionStorage keys / fires the same ga:filterchange event as before, so
-  // browse.js / filter.js / cards.js consume it unchanged.
+  // A sub-bar of single-select facet pills. Writes the same sessionStorage keys /
+  // fires the same ga:filterchange event as before, so browse.js / filter.js /
+  // cards.js consume it unchanged. The Etymology pill opens an anchored popover
+  // for picking a source (instead of an inline dropdown).
   function buildFilterBar() {
     var bar = el('nav', 'filterbar');
     bar.appendChild(el('span', 'flab', 'Show'));
     FACETS.forEach(function (f) {
       var b = el('button', 'pill'); b.type = 'button'; b.dataset.val = f[0];
-      b.appendChild(document.createTextNode(f[1]));
+      var lab = el('span', 'plabel', f[1]); b.appendChild(lab);
       if (f[0]) {
         var c = el('span', 'ct'); countEls[f[0]] = c; b.appendChild(c);
         b.title = 'across the whole dictionary';
       }
+      if (f[0] === 'etym') { etymPill = b; etymLabelEl = lab; b.setAttribute('aria-haspopup', 'true'); }
       b.addEventListener('click', function () { selectFacet(f[0]); });
       bar.appendChild(b);
     });
-    srcSel = el('select', 'scope-src');
-    srcSel.addEventListener('change', onSrcChange);
-    bar.appendChild(srcSel);
     pillBar = bar;
     return bar;
   }
@@ -79,50 +73,119 @@
   function writeLS(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function etymSource(v) { return v ? String(v).split(/[;,]/)[0].trim() : ''; }
 
-  // From search-index.json: fill the facet counts (whole-dictionary totals) and the
-  // ETYM "source" dropdown with the distinct etymology sources.
+  // Reflect the active etym source on the Etymology pill: "Etymology · Jeru" with
+  // that source's count, or plain "Etymology" with the total when no source is set.
+  function updateEtymLabel() {
+    if (!etymLabelEl) return;
+    var sel = readLS('ga.filter') === 'etym' ? readLS('ga.filter.value') : '';
+    etymLabelEl.textContent = sel ? 'Etymology · ' + sel : 'Etymology';
+    if (countEls.etym) countEls.etym.textContent = String((sel ? sources[sel] : totalEtym) || 0);
+  }
+
+  // From search-index.json: facet counts (whole-dictionary totals) + per-source counts.
   function loadIndexMeta() {
     fetch(B + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
-      var set = {}, n = { etym: 0, morph: 0, env: 0 };
+      var n = { etym: 0, morph: 0, env: 0 };
+      sources = {};
       idx.forEach(function (e) {
-        if (e.etym) { n.etym++; var s = etymSource(e.etym); if (s) set[s] = 1; }
+        if (e.etym) { n.etym++; var s = etymSource(e.etym); if (s) sources[s] = (sources[s] || 0) + 1; }
         if (e.morph) n.morph++;
         if (e.env) n.env++;
       });
-      Object.keys(countEls).forEach(function (k) { if (countEls[k]) countEls[k].textContent = String(n[k] || 0); });
-      var cur = readLS('ga.filter.value');
-      srcSel.innerHTML = '';
-      srcSel.appendChild(opt('', 'All sources'));
-      Object.keys(set).sort().forEach(function (s) { srcSel.appendChild(opt(s, s)); });
-      srcSel.value = cur;
+      totalEtym = n.etym;
+      srcOrder = Object.keys(sources).sort();
+      if (countEls.morph) countEls.morph.textContent = String(n.morph);
+      if (countEls.env) countEls.env.textContent = String(n.env);
+      updateEtymLabel();
       measureChrome();
     }).catch(function (e) { console.warn('chrome.js: index meta failed', e); });
   }
-
-  function syncSrcVisibility() { if (srcSel) srcSel.hidden = readLS('ga.filter') !== 'etym'; }
 
   function restore() {
     var f = readLS('ga.filter');
     if (f !== 'etym' && f !== 'morph' && f !== 'env') f = '';
     reflectActive(f);
-    if (!srcSel.options.length) srcSel.appendChild(opt('', 'All sources'));
-    syncSrcVisibility();
-    srcSel.value = readLS('ga.filter.value');
+    updateEtymLabel();
   }
 
   function selectFacet(val) {
+    if (val === 'etym') {
+      writeLS('ga.filter', 'etym');            // keep any previously chosen source
+      reflectActive('etym');
+      updateEtymLabel();
+      document.dispatchEvent(new CustomEvent('ga:filterchange'));
+      openSourcePopover();                      // let the user pick / change the source
+      return;
+    }
     writeLS('ga.filter', val);
-    if (val !== 'etym') { writeLS('ga.filter.value', ''); srcSel.value = ''; }
-    else writeLS('ga.filter.value', srcSel.value || '');
+    writeLS('ga.filter.value', '');
     reflectActive(val);
-    syncSrcVisibility();
+    updateEtymLabel();
+    closeSourcePopover();
     document.dispatchEvent(new CustomEvent('ga:filterchange'));
   }
 
-  function onSrcChange() {
-    writeLS('ga.filter.value', srcSel.value || '');
+  // ---- Etymology source popover (anchored under the Etymology pill) ----
+  function buildSourcePopover() {
+    srcPop = el('div', 'srcpop'); srcPop.hidden = true;
+    srcPop.setAttribute('role', 'dialog');
+    srcPop.setAttribute('aria-label', 'Filter by etymology source');
+    srcPop.appendChild(el('div', 'srcpop-h', 'Filter by source'));
+    srcPop._list = el('div', 'srcpop-list');
+    srcPop.appendChild(srcPop._list);
+    document.body.appendChild(srcPop);
+    document.addEventListener('click', function (e) {
+      if (srcPop.hidden) return;
+      if (srcPop.contains(e.target) || (etymPill && etymPill.contains(e.target))) return;
+      closeSourcePopover();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSourcePopover(); });
+    window.addEventListener('scroll', closeSourcePopover, true);
+    window.addEventListener('resize', closeSourcePopover);
+  }
+
+  function renderSourceList() {
+    var cur = readLS('ga.filter.value');
+    var list = srcPop._list; list.innerHTML = '';
+    var rows = [['', 'All sources', totalEtym]];
+    srcOrder.forEach(function (s) { rows.push([s, s, sources[s]]); });
+    rows.forEach(function (o) {
+      var row = el('button', 'srcpop-row'); row.type = 'button';
+      if (o[0] === cur) row.classList.add('on');
+      row.appendChild(el('span', 'dot'));
+      row.appendChild(el('span', 'nm', o[1]));
+      if (o[2] != null) row.appendChild(el('span', 'ct', String(o[2])));
+      row.addEventListener('click', function () { pickSource(o[0]); });
+      list.appendChild(row);
+    });
+  }
+
+  function pickSource(val) {
+    writeLS('ga.filter', 'etym');
+    writeLS('ga.filter.value', val);
+    reflectActive('etym');
+    updateEtymLabel();
+    closeSourcePopover();
     document.dispatchEvent(new CustomEvent('ga:filterchange'));
   }
+
+  function openSourcePopover() {
+    if (!srcPop) buildSourcePopover();
+    renderSourceList();
+    srcPop.hidden = false;
+    positionSourcePopover();
+  }
+
+  function positionSourcePopover() {
+    if (!srcPop || srcPop.hidden || !etymPill) return;
+    var r = etymPill.getBoundingClientRect();
+    var w = srcPop.offsetWidth || 220;
+    var left = Math.min(r.left, window.innerWidth - 8 - w);
+    srcPop.style.top = (r.bottom + 6) + 'px';
+    srcPop.style.left = Math.max(8, left) + 'px';
+  }
+
+  function closeSourcePopover() { if (srcPop && !srcPop.hidden) srcPop.hidden = true; }
 
   function init() {
     document.body.insertBefore(buildHeader(), document.body.firstChild);

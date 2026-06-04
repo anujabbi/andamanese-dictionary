@@ -4,6 +4,12 @@
 **Status:** approved
 **Scope:** `assets/chrome.js`, `assets/chrome.css` (no new files)
 
+> **Update (2026-06-03):** Per follow-up feedback, the Etymology **source**
+> sub-filter is no longer an inline dropdown. The Etymology pill now opens an
+> **anchored popover** (`.srcpop`) listing each source with its count; picking one
+> applies it and the pill reflects the choice ("Etymology · Jeru"). The filter
+> contract (`ga.filter` / `ga.filter.value` / `ga:filterchange`) is unchanged.
+
 ## Problem
 
 On the level-2 pages the annotation filter is a dropdown labelled **Show** pinned to
