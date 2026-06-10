@@ -10,6 +10,10 @@ import {
   cleanGloss,
   decodeEntities,
   extractEnv,
+  extractParagraphs,
+  senseGlosses,
+  parseEntriesFromHtml,
+  appendGloss,
 } from '../build-search-index.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -123,4 +127,42 @@ test('parseEntry sets env:true only for marked entries', () => {
   const blocks = extractEntryBlocks(fixtureHtml);
   assert.equal(parseEntry(blocks[5], 'sample-lexicon.htm').env, true);
   assert.equal(parseEntry(blocks[6], 'sample-lexicon.htm').env, undefined);
+});
+
+test('extractParagraphs flags lpLexEntryPara2 continuations as cont', () => {
+  const paras = extractParagraphs(fixtureHtml);
+  assert.equal(paras.length, 8); // 7 entries + 1 continuation
+  assert.equal(paras.filter(p => p.cont).length, 1);
+  assert.equal(paras[paras.length - 1].cont, true);
+  assert.ok(paras[paras.length - 1].body.includes('second sense'));
+});
+
+test('senseGlosses reads the first English/Hindi gloss of a sense block', () => {
+  const cont = extractParagraphs(fixtureHtml).find(p => p.cont);
+  assert.deepEqual(senseGlosses(cont.body), { en: 'second sense', hi: 'दूसरा अर्थ' });
+});
+
+test('parseEntriesFromHtml folds continuation glosses into the preceding headword', () => {
+  const entries = parseEntriesFromHtml(fixtureHtml, 'sample-lexicon.htm');
+  assert.equal(entries.length, 7); // continuation does NOT add a row
+  const last = entries[entries.length - 1];
+  assert.equal(last.id, 'e7');
+  assert.equal(last.en, 'morph only; second sense'); // now searchable
+  assert.equal(last.hi, 'केवल आकृति; दूसरा अर्थ');
+});
+
+test('appendGloss joins, skips empties, and dedupes repeated senses', () => {
+  assert.equal(appendGloss('spit', 'sputum'), 'spit; sputum');
+  assert.equal(appendGloss(undefined, 'sputum'), 'sputum');
+  assert.equal(appendGloss('bundle', 'bundle'), 'bundle'); // noun/verb share a gloss
+  assert.equal(appendGloss('spit', ''), 'spit');
+  assert.equal(appendGloss(undefined, ''), undefined);
+});
+
+test('parseEntriesFromHtml dedupes a continuation that repeats the primary gloss', () => {
+  const html = '<p class="lpLexEntryPara"><span id="e9" class="lpLexEntryName">w</span>' +
+    '<span class="lpGlossEnglish">bundle; </span></p>' +
+    '<p class="lpLexEntryPara2"> <span class="lpGlossEnglish">bundle; </span></p>';
+  const [entry] = parseEntriesFromHtml(html, 'x.htm');
+  assert.equal(entry.en, 'bundle');
 });

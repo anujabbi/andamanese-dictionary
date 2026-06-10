@@ -96,6 +96,7 @@
       note: null,
       refs: [],
       env: !!p.querySelector('span.lpEnvLex'),
+      senses: [],
     };
 
     // Homonym subscript appears as <sub> after the headword span.
@@ -119,8 +120,15 @@
     const posSpan = p.querySelector('span.lpPartOfSpeech');
     if (posSpan) entry.pos = posSpan.textContent.trim().replace(/[.\s]+$/, '');
 
-    // Linear walk over element children to capture main glosses, examples,
-    // categories, refs, and notes. State machine driven by mini-heading text.
+    collectSense(p, entry);
+    return entry;
+  }
+
+  // Shared linear walk that fills a sense target (main glosses, examples,
+  // categories, refs, note) from a paragraph's element children. State machine
+  // driven by mini-heading text. Used for the primary entry and for each
+  // lpLexEntryPara2 continuation (an additional sense of the same headword).
+  function collectSense(p, t) {
     const kids = Array.from(p.children);
     let mode = 'main';
     let currentExample = null;
@@ -146,16 +154,16 @@
           glossHi: null,
           audio: findAudioBefore(p, node),
         };
-        entry.examples.push(currentExample);
+        t.examples.push(currentExample);
         mode = 'inExample';
         continue;
       }
 
       if (mode === 'main') {
-        if (cls && cls.contains('lpGlossEnglish') && !entry.glossEn) {
-          entry.glossEn = cleanText(text);
-        } else if (cls && cls.contains('lpGlossHindi') && !entry.glossHi) {
-          entry.glossHi = cleanText(text);
+        if (cls && cls.contains('lpGlossEnglish') && !t.glossEn) {
+          t.glossEn = cleanText(text);
+        } else if (cls && cls.contains('lpGlossHindi') && !t.glossHi) {
+          t.glossHi = cleanText(text);
         }
       } else if (mode === 'inExample' && currentExample) {
         if (cls && cls.contains('lpGlossGA_in_Sript') && !currentExample.deva) {
@@ -167,14 +175,14 @@
         }
       } else if (mode === 'categories') {
         if (cls && cls.contains('lpCategory')) {
-          entry.categories.push(text.trim());
+          t.categories.push(text.trim());
         }
       } else if (mode === 'refs') {
         if (node.tagName === 'A') {
           const refSpan = node.querySelector('span.lpCrossRef');
           if (refSpan) {
             const title = node.getAttribute('title') || '';
-            entry.refs.push({
+            t.refs.push({
               href: node.getAttribute('href'),
               ipa: refSpan.textContent.trim(),
               gloss: cleanText(title.split(';')[0]) || null,
@@ -182,13 +190,22 @@
           }
         }
       } else if (mode === 'notes') {
-        if (cls && cls.contains('lpEncycInfoEnglish') && !entry.note) {
-          entry.note = cleanText(text.replace(/^NT:\s*/, ''));
+        if (cls && cls.contains('lpEncycInfoEnglish') && !t.note) {
+          t.note = cleanText(text.replace(/^NT:\s*/, ''));
         }
       }
     }
+  }
 
-    return entry;
+  // Parse an lpLexEntryPara2 continuation paragraph into a sense object (it
+  // carries a part of speech + gloss/examples but no headword of its own).
+  function parseSense(p) {
+    const sense = { pos: null, glossEn: null, glossHi: null, examples: [], categories: [], refs: [], note: null };
+    const posSpan = p.querySelector('span.lpPartOfSpeech');
+    if (posSpan) sense.pos = posSpan.textContent.trim().replace(/[.\s]+$/, '');
+    collectSense(p, sense);
+    if (!sense.pos && !sense.glossEn && !sense.glossHi && !sense.examples.length) return null;
+    return sense;
   }
 
   // ---------- Rendering ----------
@@ -207,6 +224,61 @@
       '<path d="M10.4 6.1a2.6 2.6 0 0 1 0 3.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
       '<path d="M12.1 4.6a5 5 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
     '</svg>';
+
+  function renderExample(ex) {
+    const exDiv = el('div', 'example');
+    exDiv.appendChild(el('div', 'lbl', 'Example'));
+    const line1 = document.createElement('div');
+    line1.appendChild(el('span', 'ex-ipa', ex.ipa));
+    if (ex.deva) line1.appendChild(el('span', 'ex-deva', ex.deva));
+    if (ex.audio) {
+      const exBtn = el('button', 'ex-audio');
+      exBtn.type = 'button';
+      exBtn.setAttribute('aria-label', 'Play example audio');
+      exBtn.dataset.audio = ex.audio;
+      exBtn.innerHTML = AUDIO_SVG;
+      line1.appendChild(exBtn);
+    }
+    exDiv.appendChild(line1);
+    const parts = [];
+    if (ex.glossEn) parts.push(ex.glossEn);
+    if (ex.glossHi) parts.push(ex.glossHi);
+    if (parts.length) exDiv.appendChild(el('div', 'ex-gloss', parts.join(' · ')));
+    return exDiv;
+  }
+
+  function renderRefs(refList) {
+    const refs = el('div', 'refs');
+    refs.appendChild(el('span', 'lbl', 'See also'));
+    for (const r of refList) {
+      const a = document.createElement('a');
+      a.className = 'ref';
+      a.href = r.href;
+      a.textContent = r.ipa;
+      if (r.gloss) a.appendChild(el('span', 'ref-gloss', ' · ' + r.gloss));
+      refs.appendChild(a);
+      refs.appendChild(document.createTextNode(' '));
+    }
+    return refs;
+  }
+
+  // An additional sense (from an lpLexEntryPara2 continuation): its own part of
+  // speech, gloss, examples, note, refs, and categories, under the same headword.
+  function renderSenseBlock(s) {
+    const blk = el('div', 'sense');
+    if (s.pos) blk.appendChild(el('span', 'pos', s.pos));
+    if (s.glossEn) blk.appendChild(el('div', 'gloss', s.glossEn));
+    if (s.glossHi) blk.appendChild(el('div', 'gloss-hi', s.glossHi));
+    for (const ex of s.examples) blk.appendChild(renderExample(ex));
+    if (s.note) blk.appendChild(el('div', 'note', s.note));
+    if (s.refs && s.refs.length) blk.appendChild(renderRefs(s.refs));
+    if (s.categories && s.categories.length) {
+      const cats = el('div', 'cats');
+      for (const c of s.categories) cats.appendChild(el('span', 'cat', c));
+      blk.appendChild(cats);
+    }
+    return blk;
+  }
 
   function renderCard(entry, pictureSrc) {
     const card = el('article', 'entry');
@@ -251,46 +323,13 @@
     }
 
     // Examples
-    for (const ex of entry.examples) {
-      const exDiv = el('div', 'example');
-      exDiv.appendChild(el('div', 'lbl', 'Example'));
-      const line1 = document.createElement('div');
-      line1.appendChild(el('span', 'ex-ipa', ex.ipa));
-      if (ex.deva) line1.appendChild(el('span', 'ex-deva', ex.deva));
-      if (ex.audio) {
-        const exBtn = el('button', 'ex-audio');
-        exBtn.type = 'button';
-        exBtn.setAttribute('aria-label', 'Play example audio');
-        exBtn.dataset.audio = ex.audio;
-        exBtn.innerHTML = AUDIO_SVG;
-        line1.appendChild(exBtn);
-      }
-      exDiv.appendChild(line1);
-      const parts = [];
-      if (ex.glossEn) parts.push(ex.glossEn);
-      if (ex.glossHi) parts.push(ex.glossHi);
-      if (parts.length) exDiv.appendChild(el('div', 'ex-gloss', parts.join(' · ')));
-      body.appendChild(exDiv);
-    }
+    for (const ex of entry.examples) body.appendChild(renderExample(ex));
 
     // Note
     if (entry.note) body.appendChild(el('div', 'note', entry.note));
 
     // Refs
-    if (entry.refs.length) {
-      const refs = el('div', 'refs');
-      refs.appendChild(el('span', 'lbl', 'See also'));
-      for (const r of entry.refs) {
-        const a = document.createElement('a');
-        a.className = 'ref';
-        a.href = r.href;
-        a.textContent = r.ipa;
-        if (r.gloss) a.appendChild(el('span', 'ref-gloss', ' · ' + r.gloss));
-        refs.appendChild(a);
-        refs.appendChild(document.createTextNode(' '));
-      }
-      body.appendChild(refs);
-    }
+    if (entry.refs.length) body.appendChild(renderRefs(entry.refs));
 
     // Categories
     if (entry.categories.length || entry.env) {
@@ -299,6 +338,9 @@
       for (const c of entry.categories) cats.appendChild(el('span', 'cat', c));
       body.appendChild(cats);
     }
+
+    // Additional senses (lpLexEntryPara2 continuations of the same headword)
+    for (const s of entry.senses || []) body.appendChild(renderSenseBlock(s));
 
     card.appendChild(body);
 
@@ -400,12 +442,14 @@
   // ---------- Page transformation ----------
 
   function transformPage() {
-    const paras = Array.from(document.querySelectorAll('p.lpLexEntryPara, p.lpPicturePara'));
+    const paras = Array.from(document.querySelectorAll('p.lpLexEntryPara, p.lpLexEntryPara2, p.lpPicturePara'));
     if (!paras.length) return;
 
     const container = el('div', 'cards-page');
     let pendingPicture = null;
     const orphansToRemove = [];
+    const built = [];          // { entry, picture } in document order
+    let lastEntry = null;      // for attaching lpLexEntryPara2 continuations
 
     for (const p of paras) {
       if (p.classList.contains('lpPicturePara')) {
@@ -423,14 +467,21 @@
         pendingPicture = img ? img.getAttribute('src') : null;
         continue;
       }
+      if (p.classList.contains('lpLexEntryPara2')) {
+        // Continuation: an extra sense of the previous headword (no headword of its own).
+        const sense = parseSense(p);
+        if (sense && lastEntry) lastEntry.senses.push(sense);
+        continue;
+      }
       const entry = parseEntry(p);
       if (!entry) continue;
-      const card = renderCard(entry, pendingPicture);
+      built.push({ entry: entry, picture: pendingPicture });
       pendingPicture = null;
-      container.appendChild(card);
+      lastEntry = entry;
     }
 
-    if (!container.firstChild) return;
+    if (!built.length) return;
+    for (const b of built) container.appendChild(renderCard(b.entry, b.picture));
 
     paras[0].parentNode.insertBefore(container, paras[0]);
     for (const p of paras) p.remove();
@@ -449,7 +500,7 @@
 
   // Expose the renderer so the two-pane index/category pages (browse.js) can
   // render an entry parsed from a fetched document, not only the current page.
-  window.GACards = { parseEntry: parseEntry, renderCard: renderCard, applyFilter: applyFilter };
+  window.GACards = { parseEntry: parseEntry, parseSense: parseSense, renderCard: renderCard, applyFilter: applyFilter };
 
   function init() {
     transformPage();

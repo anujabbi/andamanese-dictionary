@@ -15,7 +15,16 @@
         if (!span) return null;
         var p = span.closest('p.lpLexEntryPara');
         if (!p) return null;
-        return window.GACards.renderCard(window.GACards.parseEntry(p));
+        var entry = window.GACards.parseEntry(p);
+        if (!entry) return null;
+        // Attach any following lpLexEntryPara2 continuation senses of this headword.
+        var sib = p.nextElementSibling;
+        while (sib && sib.classList && sib.classList.contains('lpLexEntryPara2')) {
+          var s = window.GACards.parseSense(sib);
+          if (s) entry.senses.push(s);
+          sib = sib.nextElementSibling;
+        }
+        return window.GACards.renderCard(entry);
       });
   }
 
@@ -226,10 +235,18 @@
       curCards = wrap;
       fetch(base + 'categories/' + file).then(function (r) { return r.text(); }).then(function (html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
-        Array.prototype.forEach.call(doc.querySelectorAll('p.lpLexEntryPara'), function (p) {
+        var built = [], lastEntry = null;
+        Array.prototype.forEach.call(doc.querySelectorAll('p.lpLexEntryPara, p.lpLexEntryPara2'), function (p) {
+          if (p.classList.contains('lpLexEntryPara2')) {
+            var s = window.GACards.parseSense(p);
+            if (s && lastEntry) lastEntry.senses.push(s);
+            return;
+          }
           var entry = window.GACards.parseEntry(p);
-          if (entry) wrap.appendChild(window.GACards.renderCard(entry));
+          if (!entry) return;
+          built.push(entry); lastEntry = entry;
         });
+        built.forEach(function (entry) { wrap.appendChild(window.GACards.renderCard(entry)); });
         window.GACards.applyFilter(wrap);
       });
       try { history.replaceState(null, '', '#' + file); } catch (e) { location.hash = file; }
