@@ -11,6 +11,7 @@ import {
   decodeEntities,
   extractEnv,
   extractParagraphs,
+  extractPictureSrc,
   senseGlosses,
   parseEntriesFromHtml,
   appendGloss,
@@ -131,10 +132,33 @@ test('parseEntry sets env:true only for marked entries', () => {
 
 test('extractParagraphs flags lpLexEntryPara2 continuations as cont', () => {
   const paras = extractParagraphs(fixtureHtml);
-  assert.equal(paras.length, 8); // 7 entries + 1 continuation
+  assert.equal(paras.length, 9); // 7 entries + 1 continuation + 1 picture
   assert.equal(paras.filter(p => p.cont).length, 1);
   assert.equal(paras[paras.length - 1].cont, true);
   assert.ok(paras[paras.length - 1].body.includes('second sense'));
+});
+
+test('extractParagraphs keeps picture paragraphs in document order', () => {
+  const paras = extractParagraphs(fixtureHtml);
+  const picIndex = paras.findIndex(p => p.pic);
+  assert.equal(paras.filter(p => p.pic).length, 1);
+  // The picture paragraph precedes the entry it illustrates.
+  assert.ok(paras[picIndex + 1].body.includes('no-audio-word'));
+});
+
+test('extractPictureSrc pulls the image out of a picture paragraph', () => {
+  const pic = extractParagraphs(fixtureHtml).find(p => p.pic);
+  assert.equal(extractPictureSrc(pic.body), 'pictures/silent-word.jpg');
+  assert.equal(extractPictureSrc('<p>no image here</p>'), null);
+});
+
+test('parseEntriesFromHtml attaches the preceding picture to its entry', () => {
+  const entries = parseEntriesFromHtml(fixtureHtml, 'sample-lexicon.htm');
+  const byId = Object.fromEntries(entries.map(e => [e.id, e]));
+  assert.equal(byId.e3.pic, 'pictures/silent-word.jpg');
+  // The picture belongs to the entry that follows it, not to any other entry.
+  assert.equal(byId.e2.pic, undefined);
+  assert.equal(byId.e4.pic, undefined);
 });
 
 test('senseGlosses reads the first English/Hindi gloss of a sense block', () => {

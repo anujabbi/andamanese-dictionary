@@ -208,6 +208,50 @@
     return sense;
   }
 
+  // ---------- Media association ----------
+
+  // The illustration belonging to an entry paragraph, for callers that render a
+  // single entry out of a fetched document (browse.js) rather than transforming
+  // the whole page. Lexique Pro emits the picture BEFORE the entry it belongs
+  // to, and since <p> cannot contain <table> the parser rewrites
+  //   <p class="lpPicturePara"><table>…</table></p>
+  // as three siblings: an empty picture <p>, the table, and an empty <p> from
+  // the stray close tag. So walk back over those, stopping at the previous
+  // entry so one entry's picture never leaks onto the next.
+  function pictureBefore(p) {
+    var n = p.previousElementSibling;
+    for (var i = 0; n && i < 4; i++, n = n.previousElementSibling) {
+      if (n.tagName === 'P' &&
+          (n.classList.contains('lpLexEntryPara') || n.classList.contains('lpLexEntryPara2'))) {
+        return null;
+      }
+      var img = n.querySelector('img[src*="/pictures/"]');
+      if (img) return img.getAttribute('src');
+    }
+    return null;
+  }
+
+  // Media paths inside lexicon/ and categories/ pages are written relative to
+  // those directories ("../audio/x.wav"). A page that renders entries fetched
+  // from there may sit at a different depth, so re-root every path onto the
+  // consumer's own base ('' at the repo root, '../' one level down).
+  function mediaPath(src, base) {
+    if (!src) return null;
+    return (base || '') + src.replace(/^(\.\.\/)+/, '');
+  }
+
+  // Re-root an entry's audio paths (main + examples + senses) onto `base`.
+  function rebaseEntryMedia(entry, base) {
+    if (!entry) return entry;
+    entry.audioMain = mediaPath(entry.audioMain, base);
+    var lists = [entry.examples || []];
+    (entry.senses || []).forEach(function (s) { lists.push(s.examples || []); });
+    lists.forEach(function (exs) {
+      exs.forEach(function (ex) { ex.audio = mediaPath(ex.audio, base); });
+    });
+    return entry;
+  }
+
   // ---------- Rendering ----------
 
   function el(tag, className, text) {
@@ -500,7 +544,15 @@
 
   // Expose the renderer so the two-pane index/category pages (browse.js) can
   // render an entry parsed from a fetched document, not only the current page.
-  window.GACards = { parseEntry: parseEntry, parseSense: parseSense, renderCard: renderCard, applyFilter: applyFilter };
+  window.GACards = {
+    parseEntry: parseEntry,
+    parseSense: parseSense,
+    renderCard: renderCard,
+    applyFilter: applyFilter,
+    pictureBefore: pictureBefore,
+    mediaPath: mediaPath,
+    rebaseEntryMedia: rebaseEntryMedia,
+  };
 
   function init() {
     transformPage();
