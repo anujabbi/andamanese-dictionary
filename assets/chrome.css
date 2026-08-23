@@ -13,6 +13,28 @@
 .hdr nav a:hover{background:var(--paper-2);color:var(--accent);}
 .hdr nav a.active{background:var(--accent);color:#fff;}
 
+/* ---- header search (right of the nav, dropdown anchored under it) ---- */
+.hdrsearch{position:relative;margin-left:auto;flex:0 1 260px;min-width:150px;}
+.hs-input{width:100%;background:#fff;border:1px solid var(--rule);border-radius:999px;
+  padding:7px 14px;font-family:var(--serif);font-size:13px;color:var(--ink);outline:none;
+  transition:border-color .15s, box-shadow .15s;}
+.hs-input::placeholder{color:var(--ink-mute);font-style:italic;}
+.hs-input:focus{border-color:var(--accent-soft);box-shadow:0 2px 10px rgba(80,55,20,.10);}
+.hs-input::-webkit-search-cancel-button{cursor:pointer;}
+.hdrdd{position:absolute;right:0;top:calc(100% + 6px);width:min(360px,80vw);max-height:60vh;overflow:auto;
+  background:#fff;border:1px solid var(--rule);border-radius:12px;
+  box-shadow:0 14px 32px rgba(80,55,20,.16);z-index:40;}
+.hdrdd[hidden]{display:none;}
+.hdrdd .row{padding:9px 14px;border-top:1px solid #f3ead4;cursor:pointer;}
+.hdrdd .row:first-child{border-top:none;}
+.hdrdd .row:hover,.hdrdd .row.active{background:#fdf6e3;}
+.hdrdd .row .l1{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+.hdrdd .row .ipa{font-family:var(--serif);font-size:15.5px;color:var(--ink);}
+.hdrdd .row .deva{font-size:12.5px;color:var(--ink-mute);}
+.hdrdd .row .l2{margin-top:2px;font-size:11.5px;color:var(--ink-soft);}
+.hdrdd mark{background:var(--hi);color:inherit;padding:0 1px;border-radius:2px;}
+.hdrdd .hs-empty{padding:14px;font-size:12.5px;color:var(--ink-mute);text-align:center;}
+
 /* ---- Show filter: single-select facet pills + ETYM source dropdown ----
    Sticky sub-bar directly under the header. Sticky offsets for the panes below
    come from --chrome-top / --chrome-top-lb, measured in chrome.js (measureChrome). */
@@ -88,7 +110,10 @@
 @media (max-width:720px){
   .layout{flex-direction:column;}
   .idx,.catlist{position:static;width:auto;height:auto;max-height:40vh;border-right:none;border-bottom:1px solid #e7dcc2;}
-  .hdr{gap:10px;padding:10px 14px;}
+  .hdr{gap:10px;padding:10px 14px;flex-wrap:wrap;}
   .hdr nav a{padding:5px 8px;}
+  /* the search takes its own full-width row under the brand + nav */
+  .hdrsearch{flex:1 0 100%;margin-left:0;}
+  .hdrdd{left:0;right:0;width:auto;}
   .filterbar{padding:8px 12px;gap:6px;}
 }
