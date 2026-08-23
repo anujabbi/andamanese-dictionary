@@ -295,10 +295,13 @@
     var lexMap = null, index = null, collation = null, devBox = null;
     function cardsPage() { return document.querySelector('.cards-page'); }
 
+    // search-index.json stores media paths relative to the repo root
+    // ("audio/x.wav"), so they need this page's base prefix to resolve from
+    // inside lexicon/ — without it every देव-mode player 404s.
     function entryFromIndex(e) {
       return { id: e.id, ipa: e.ipa, hom: null, deva: e.deva || null, morph: e.morph || null,
                varText: null, etym: e.etym || null, pos: null, glossEn: e.en || null,
-               glossHi: e.hi || null, audioMain: e.audio || null, examples: [],
+               glossHi: e.hi || null, audioMain: e.audio ? B + e.audio : null, examples: [],
                categories: e.cat ? [e.cat] : [], note: null, refs: [], env: !!e.env };
     }
     function toggleEl() {
@@ -356,7 +359,9 @@
       devBox.innerHTML = '';
       var head = document.createElement('p'); head.className = 'lpTitlePara'; head.textContent = letter;
       devBox.appendChild(head);
-      rows.forEach(function (e) { devBox.appendChild(window.GACards.renderCard(entryFromIndex(e))); });
+      rows.forEach(function (e) {
+        devBox.appendChild(window.GACards.renderCard(entryFromIndex(e), e.pic ? B + e.pic : null));
+      });
     }
 
     Promise.all([

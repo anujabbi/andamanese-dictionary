@@ -24,7 +24,11 @@
           if (s) entry.senses.push(s);
           sib = sib.nextElementSibling;
         }
-        return window.GACards.renderCard(entry);
+        // Audio/picture paths in the fetched file are relative to lexicon/; re-root
+        // them onto this page's base and carry the entry's illustration across.
+        window.GACards.rebaseEntryMedia(entry, base);
+        var pic = window.GACards.mediaPath(window.GACards.pictureBefore(p), base);
+        return window.GACards.renderCard(entry, pic);
       });
   }
 
@@ -244,9 +248,13 @@
           }
           var entry = window.GACards.parseEntry(p);
           if (!entry) return;
-          built.push(entry); lastEntry = entry;
+          // Category files carry the same media markup as lexicon files, relative
+          // to categories/ — re-root it and pick up the entry's illustration.
+          window.GACards.rebaseEntryMedia(entry, base);
+          built.push({ entry: entry, pic: window.GACards.mediaPath(window.GACards.pictureBefore(p), base) });
+          lastEntry = entry;
         });
-        built.forEach(function (entry) { wrap.appendChild(window.GACards.renderCard(entry)); });
+        built.forEach(function (b) { wrap.appendChild(window.GACards.renderCard(b.entry, b.pic)); });
         window.GACards.applyFilter(wrap);
       });
       try { history.replaceState(null, '', '#' + file); } catch (e) { location.hash = file; }

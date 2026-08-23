@@ -78,17 +78,25 @@ export function extractEnv(block) {
   return /<span\s+class="lpEnvLex">/.test(block);
 }
 
-// Ordered entry + continuation paragraphs. An lpLexEntryPara2 is an additional
-// sense of the preceding headword (longer class name listed first so the
-// alternation does not stop short on the shared "lpLexEntryPara" prefix).
+// Ordered entry + continuation + picture paragraphs. An lpLexEntryPara2 is an
+// additional sense of the preceding headword (longer class name listed first so
+// the alternation does not stop short on the shared "lpLexEntryPara" prefix);
+// an lpPicturePara carries the illustration for the entry that FOLLOWS it.
 export function extractParagraphs(html) {
-  const re = /<p class="(lpLexEntryPara2|lpLexEntryPara)">([\s\S]*?)<\/p>/g;
+  const re = /<p class="(lpLexEntryPara2|lpLexEntryPara|lpPicturePara)">([\s\S]*?)<\/p>/g;
   const out = [];
   let m;
   while ((m = re.exec(html)) !== null) {
-    out.push({ cont: m[1] === 'lpLexEntryPara2', body: m[2] });
+    out.push({ cont: m[1] === 'lpLexEntryPara2', pic: m[1] === 'lpPicturePara', body: m[2] });
   }
   return out;
+}
+
+// The picture path out of an lpPicturePara body, normalised to a repo-root
+// relative path ("pictures/x.jpg") the way audio paths are stored.
+export function extractPictureSrc(block) {
+  const m = block.match(/<img[^>]+src="\.\.\/(pictures\/[^"]+)"/);
+  return m ? m[1] : null;
 }
 
 // First English/Hindi gloss of a (continuation) sense block.
@@ -113,7 +121,12 @@ export function appendGloss(existing, addition) {
 export function parseEntriesFromHtml(html, file) {
   const entries = [];
   let last = null;
+  let pendingPic = null;
   for (const para of extractParagraphs(html)) {
+    if (para.pic) {
+      pendingPic = extractPictureSrc(para.body);
+      continue;
+    }
     if (para.cont) {
       if (last) {
         const g = senseGlosses(para.body);
@@ -125,7 +138,12 @@ export function parseEntriesFromHtml(html, file) {
       continue;
     }
     const entry = parseEntry(para.body, file);
-    if (entry) { entries.push(entry); last = entry; }
+    if (entry) {
+      if (pendingPic) entry.pic = pendingPic;
+      entries.push(entry);
+      last = entry;
+    }
+    pendingPic = null;
   }
   return entries;
 }

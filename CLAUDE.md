@@ -46,6 +46,7 @@ Each script is single-purpose and globally scoped (no modules, no build):
 - `assets/home.css`, `assets/home.js` — homepage styles and behavior. Vanilla JS in a single IIFE, no modules.
 - `assets/search-index.json` — compact JSON index (~3,700 entries) consumed by the homepage's autocomplete. Generated; **re-run `node scripts/build-search-index.mjs` after editing any `lexicon/*.htm` content** so the autocomplete stays in sync.
 - `scripts/build-search-index.mjs` + `scripts/tests/` — Node ESM parser with `node:test` coverage.
+- `scripts/fix-media-refs.mjs` — repairs `../audio/` and `../pictures/` references that don't match the file on disk (the checked-in media files spell apostrophes as `_`). Idempotent; `--dry-run` reports without writing.
 - `stylesheets/lexiquepro.css` — was the original Lexique Pro stylesheet; in May 2026 the homepage palette/typography (paper background, Georgia serif headwords, terracotta accent) was applied to it. Sizes, weights, margins, and layout were left untouched.
 
 Autocomplete results navigate to `lexicon/NN.htm#eN` — clicking a search hit lands the user inside the existing frameset experience, where `javascript/hi.js` highlights the entry's anchor.
@@ -57,3 +58,5 @@ Autocomplete results navigate to `lexicon/NN.htm#eN` — clicking a search hit l
 - After editing `lexicon/*.htm`, re-run `node scripts/build-search-index.mjs` to refresh the search index. The parser may need updating if you change the HTML structure (it's regex-based on the `lp*` class conventions).
 - Treat character encoding carefully: pages declare `charset=UTF-8` and contain IPA (ɑ, ɛ, ɖ, ʈʰ, ŋ, ɲ…) plus Devanagari. Don't let editors re-save as Windows-1252.
 - When referencing audio/picture files with spaces in their names, use `%20` in HTML attributes.
+- An entry's picture lives in the `<p class="lpPicturePara">` **before** its entry paragraph, and its pronunciation in an `<a href="../audio/…">` before the headword span. Both conventions are load-bearing: `assets/cards.js` (`pictureBefore`) and `scripts/build-search-index.mjs` (the `pic` field) pair media to entries by that ordering, and every tab — Lexicon a–z and देव, the three reverse indexes, Categories — renders from one of those two paths.
+- Media paths differ by source: page markup stores them relative to the page's own directory (`../audio/x.wav`), while `search-index.json` stores them repo-root relative (`audio/x.wav`). Anything rendering index-sourced entries must prefix `GA_PAGE.base`; anything rendering fetched markup should pass it through `GACards.rebaseEntryMedia` / `GACards.mediaPath`.
