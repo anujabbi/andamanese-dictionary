@@ -196,6 +196,11 @@
       renderForMode();
     }
 
+    // A header-search hit is shown in this page's own pane rather than sending
+    // the user off to lexicon/. The left-hand list keeps whatever letter it was
+    // showing — only the entry pane changes.
+    window.GAChrome.registerEntryShower(function (file, id) { showEntry(file, id); return true; });
+
     // Load everything we need, then render.
     Promise.all([
       fetch('alphalinks.htm').then(function (r) { return r.text(); }).then(parseLetterLinks),
@@ -260,6 +265,24 @@
       try { history.replaceState(null, '', '#' + file); } catch (e) { location.hash = file; }
     }
 
+    // The categories pane normally holds a whole category; a header-search hit
+    // replaces it with that single entry's card. Picking a category again in
+    // the left-hand list restores the full listing.
+    function showSingleEntry(file, id) {
+      Array.prototype.forEach.call(catlist.querySelectorAll('a'), function (a) { a.classList.remove('active'); });
+      pane.innerHTML = '';
+      var wrap = document.createElement('div'); wrap.className = 'cards';
+      pane.appendChild(wrap);
+      curCards = wrap;
+      loadEntry(base, file, id).then(function (card) {
+        if (card) { wrap.appendChild(card); window.GACards.applyFilter(wrap); }
+        else wrap.innerHTML = '<p class="hint">Entry not found.</p>';
+      });
+      try { history.replaceState(null, '', '#' + id); } catch (e) {}
+      return true;
+    }
+    window.GAChrome.registerEntryShower(showSingleEntry);
+
     fetch(base + 'assets/category-list.json').then(function (r) { return r.json(); }).then(function (list) {
       list.forEach(function (c) {
         var a = document.createElement('a');
@@ -268,6 +291,15 @@
         catlist.appendChild(a);
       });
       var hash = (location.hash || '').replace('#', '');
+      // #eN — a link shared from a search hit; anything else selects a category.
+      if (/^e\d+$/.test(hash)) {
+        fetch(base + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
+          var hit = idx.filter(function (e) { return e.id === hash; })[0];
+          if (hit) showSingleEntry(hit.file, hit.id);
+          else showCategory(list[0].file, list[0].name);
+        });
+        return;
+      }
       var initial = list.filter(function (c) { return c.file === hash; })[0] || list[0];
       if (initial) showCategory(initial.file, initial.name);
     }).catch(function (e) { console.warn('browse.js: category list failed', e); });

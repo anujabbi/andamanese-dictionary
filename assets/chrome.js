@@ -33,7 +33,201 @@
       nav.appendChild(a);
     });
     hdr.appendChild(nav);
+    hdr.appendChild(buildSearch());
     return hdr;
+  }
+
+  // ---- header search ------------------------------------------------------
+  // Searches the same search-index.json that loadIndexMeta() already fetches
+  // for the facet counts, across all four scripts. Picking a hit hands off to
+  // the page's registered entry-shower (the two-pane views swap their pane in
+  // place); with no shower it falls back to navigating into lexicon/.
+
+  var SEARCH_MAX = 8;
+  var sIndex = null, sResults = [], sActive = -1, sInput, sDrop, sPending = null;
+  var entryShower = null;
+
+  function registerEntryShower(fn) { entryShower = fn; }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Nobody has ɑ, ʈ or š on a keyboard, so headwords are matched through an
+  // ASCII fold: "akasot" finds ɑkɑšɔʈ. Folding can change length (ː and the
+  // combining caron in š fold away), so fold() also returns, for each folded
+  // character, the index it came from — that's what lets highlight() put the
+  // <mark> back on the right slice of the ORIGINAL text.
+  var FOLD = {
+    'ɑ': 'a', 'ɔ': 'o', 'ʰ': 'h', 'ʈ': 't', 'ɛ': 'e', 'ŋ': 'n', 'ɖ': 'd', 'ɲ': 'n',
+    'ɡ': 'g', 'ɸ': 'f', 'ɽ': 'r', 'β': 'b', 'ə': 'e', 'ɪ': 'i', 'ʃ': 's',
+    'ː': '', '̌': '', '̃': '',
+  };
+
+  function fold(text) {
+    var s = String(text), out = '', map = [];
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      var f = Object.prototype.hasOwnProperty.call(FOLD, ch) ? FOLD[ch] : ch.toLowerCase();
+      for (var k = 0; k < f.length; k++) { out += f[k]; map.push(i); }
+    }
+    map.push(s.length);          // sentinel: end of the last folded character
+    return { s: out, map: map };
+  }
+
+  // The query gets NFD-decomposed first, so a pasted precomposed "š" folds the
+  // same way as the s + combining caron the lexicon actually stores. Only the
+  // query is normalised — normalising the indexed text would shift the offsets
+  // highlight() maps back through.
+  function foldQuery(s) {
+    return fold(String(s).trim().normalize ? String(s).trim().normalize('NFD') : String(s).trim()).s;
+  }
+
+  function highlight(text, q) {
+    var f = fold(text);
+    var at = q ? f.s.indexOf(q) : -1;
+    if (at < 0) return escapeHtml(text);
+    var from = f.map[at], to = f.map[Math.min(at + q.length, f.map.length - 1)];
+    return escapeHtml(text.slice(0, from)) + '<mark>' + escapeHtml(text.slice(from, to)) +
+           '</mark>' + escapeHtml(text.slice(to));
+  }
+
+  // Headwords (ipa, deva) outrank glosses (en, hi); a prefix outranks a
+  // substring. Returns null when the entry does not match at all.
+  var SEARCH_FIELDS = [
+    { key: 'ipa',  head: true,  prefix: 100, inner: 50 },
+    { key: 'deva', head: true,  prefix: 95,  inner: 48 },
+    { key: 'en',   head: false, prefix: 80,  inner: 40 },
+    { key: 'hi',   head: false, prefix: 78,  inner: 38 },
+  ];
+
+  function scoreEntry(e, q) {
+    var best = null;
+    for (var i = 0; i < SEARCH_FIELDS.length; i++) {
+      var f = SEARCH_FIELDS[i], v = e[f.key];
+      if (!v) continue;
+      var low = fold(v).s;
+      var at = low.indexOf(q);
+      if (at < 0) continue;
+      // A gloss matches "by prefix" when any of its words starts with the query.
+      var isPrefix = f.head ? at === 0
+                            : low.split(/[\s;,]+/).some(function (w) { return w.indexOf(q) === 0; });
+      var score = isPrefix ? f.prefix : f.inner;
+      if (!best || score > best.score) best = { score: score, field: f.key };
+    }
+    return best;
+  }
+
+  function runSearch(query) {
+    var q = foldQuery(query);
+    if (!q || !sIndex) return [];
+    var hits = [];
+    for (var i = 0; i < sIndex.length; i++) {
+      var s = scoreEntry(sIndex[i], q);
+      if (s) hits.push({ entry: sIndex[i], score: s.score, field: s.field });
+    }
+    hits.sort(function (a, b) {
+      return (b.score - a.score) || String(a.entry.ipa).localeCompare(String(b.entry.ipa));
+    });
+    return hits.slice(0, SEARCH_MAX);
+  }
+
+  function rowHtml(hit, q, active) {
+    var e = hit.entry;
+    var mark = function (key) {
+      return e[key] ? (hit.field === key ? highlight(e[key], q) : escapeHtml(e[key])) : '';
+    };
+    var gloss = [mark('en'), mark('hi')].filter(Boolean).join(' · ');
+    return '<div class="row' + (active ? ' active' : '') + '" role="option" data-id="' + escapeHtml(e.id) + '">' +
+             '<div class="l1"><span class="ipa">' + mark('ipa') + '</span>' +
+               (e.deva ? '<span class="deva">' + mark('deva') + '</span>' : '') + '</div>' +
+             (gloss ? '<div class="l2">' + gloss + '</div>' : '') +
+           '</div>';
+  }
+
+  // `query` is what the user typed (shown back to them); rows highlight against
+  // the folded form, since that is what actually matched.
+  function renderResults(query) {
+    if (!sResults.length) {
+      sDrop.innerHTML = '<div class="hs-empty">No matches for “' + escapeHtml(query) + '”</div>';
+    } else {
+      var q = foldQuery(query);
+      sDrop.innerHTML = sResults.map(function (h, i) { return rowHtml(h, q, i === sActive); }).join('');
+    }
+    sDrop.hidden = false;
+  }
+
+  function closeSearch() {
+    if (sDrop) { sDrop.hidden = true; sDrop.innerHTML = ''; }
+    sResults = []; sActive = -1;
+  }
+
+  function setActiveRow(i) {
+    sActive = i;
+    Array.prototype.forEach.call(sDrop.querySelectorAll('.row'), function (r, n) {
+      r.classList.toggle('active', n === sActive);
+      if (n === sActive) r.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function onSearchInput() {
+    var q = sInput.value;
+    if (!q.trim()) { closeSearch(); return; }
+    if (!sIndex) { sPending = q; return; }   // index still loading; replay on arrival
+    sResults = runSearch(q);
+    sActive = sResults.length ? 0 : -1;
+    renderResults(q);
+  }
+
+  // Hand the entry to whichever view is showing, or navigate to its lexicon page.
+  function openEntry(e) {
+    closeSearch();
+    sInput.blur();
+    if (entryShower && entryShower(e.file, e.id)) return;
+    location.href = B + 'lexicon/' + e.file + '#' + e.id;
+  }
+
+  function onSearchKey(ev) {
+    if (ev.key === 'Escape') { closeSearch(); sInput.blur(); return; }
+    if (sDrop.hidden || !sResults.length) return;
+    if (ev.key === 'ArrowDown') {
+      ev.preventDefault(); setActiveRow((sActive + 1) % sResults.length);
+    } else if (ev.key === 'ArrowUp') {
+      ev.preventDefault(); setActiveRow((sActive - 1 + sResults.length) % sResults.length);
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      openEntry(sResults[sActive >= 0 ? sActive : 0].entry);
+    }
+  }
+
+  function buildSearch() {
+    var wrap = el('div', 'hdrsearch');
+    sInput = document.createElement('input');
+    sInput.type = 'search';
+    sInput.className = 'hs-input';
+    sInput.placeholder = 'Search entries…';
+    sInput.autocomplete = 'off';
+    sInput.setAttribute('aria-label', 'Search the dictionary');
+    sDrop = el('div', 'hdrdd');
+    sDrop.hidden = true;
+    sDrop.setAttribute('role', 'listbox');
+    wrap.appendChild(sInput);
+    wrap.appendChild(sDrop);
+
+    sInput.addEventListener('input', onSearchInput);
+    sInput.addEventListener('keydown', onSearchKey);
+    sInput.addEventListener('focus', function () { if (sInput.value.trim()) onSearchInput(); });
+    sDrop.addEventListener('click', function (ev) {
+      var row = ev.target.closest('.row');
+      if (!row) return;
+      var hit = sResults.filter(function (h) { return h.entry.id === row.dataset.id; })[0];
+      if (hit) openEntry(hit.entry);
+    });
+    document.addEventListener('click', function (ev) {
+      if (!sDrop.hidden && !ev.target.closest('.hdrsearch')) closeSearch();
+    });
+    return wrap;
   }
 
   var pillBar, countEls = {}, etymPill, etymLabelEl;
@@ -85,6 +279,9 @@
   // From search-index.json: facet counts (whole-dictionary totals) + per-source counts.
   function loadIndexMeta() {
     fetch(B + 'assets/search-index.json').then(function (r) { return r.json(); }).then(function (idx) {
+      sIndex = idx;                            // the header search shares this fetch
+      if (sPending != null && sInput && sPending === sInput.value) onSearchInput();
+      sPending = null;
       var n = { etym: 0, morph: 0, env: 0 };
       sources = {};
       idx.forEach(function (e) {
@@ -279,6 +476,10 @@
     headerEl: function () { return document.querySelector('header.ga-chrome'); },
     renderLetterRow: renderLetterRow,
     onReady: function (fn) { document.addEventListener('ga:chromeready', fn); },
+    // A page controller registers how IT wants to display an entry the header
+    // search picked. fn(file, id) returns true when it handled the entry;
+    // anything falsy makes the search navigate into lexicon/ instead.
+    registerEntryShower: registerEntryShower,
   };
 
   function firstLetterIn(text, set) {
@@ -363,6 +564,22 @@
         devBox.appendChild(window.GACards.renderCard(entryFromIndex(e), e.pic ? B + e.pic : null));
       });
     }
+
+    // An entry on THIS letter page is scrolled to in place; one on another page
+    // is left to the search's navigation fallback. देव mode hides the static
+    // cards, so drop back to a–z first or the scroll lands on nothing.
+    function showOnThisPage(file, id) {
+      if (cur == null || file !== cur + '.htm') return false;
+      var active = document.querySelector('.scriptseg button.active');
+      if (active && active.dataset.key === 'dev') setMode('ipa');
+      var node = document.getElementById(id);
+      if (!node) return false;
+      try { history.replaceState(null, '', '#' + id); } catch (e) {}
+      measureChrome();
+      requestAnimationFrame(function () { node.scrollIntoView({ block: 'start' }); });
+      return true;
+    }
+    registerEntryShower(showOnThisPage);
 
     Promise.all([
       fetch(B + 'assets/lexicon-letters.json').then(function (r) { return r.json(); }),
