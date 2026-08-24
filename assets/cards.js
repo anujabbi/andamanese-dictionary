@@ -410,6 +410,10 @@
 
   // ---------- Audio click delegation ----------
 
+  // Delegated on `document`, not on a card container: cards are also rendered
+  // into the reverse-index panes, the categories pane and the देव-mode list
+  // (via GACards.renderCard) long after this runs, and a per-container listener
+  // left every one of those play buttons dead. Same pattern as installLightbox.
   function installAudioHandler(root) {
     root.addEventListener('click', function (e) {
       const btn = e.target.closest('[data-audio]');
@@ -534,7 +538,6 @@
     // The shared chrome.js header now provides Home/nav, so the standalone
     // "← Home" bar is redundant — only render it if chrome is NOT present.
     if (!window.GA_PAGE) maybeRenderHeader(container);
-    installAudioHandler(container);
     applyFilter(container);
     // Re-apply when the shared Show filter changes (chrome.js dispatches this).
     document.addEventListener('ga:filterchange', function () { applyFilter(container); });
@@ -556,6 +559,7 @@
 
   function init() {
     transformPage();
+    installAudioHandler(document);
     installLightbox();
   }
 
