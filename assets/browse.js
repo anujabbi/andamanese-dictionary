@@ -4,32 +4,57 @@
 (function () {
   'use strict';
 
+  // Turn the #id entry paragraph of an already-parsed lexicon document into a card.
+  // Returns HTMLElement|null.
+  function cardFromDoc(doc, id, base) {
+    var span = doc.getElementById(id);
+    if (!span) return null;
+    var p = span.closest('p.lpLexEntryPara');
+    if (!p) return null;
+    var entry = window.GACards.parseEntry(p);
+    if (!entry) return null;
+    // Attach any following lpLexEntryPara2 continuation senses of this headword.
+    var sib = p.nextElementSibling;
+    while (sib && sib.classList && sib.classList.contains('lpLexEntryPara2')) {
+      var s = window.GACards.parseSense(sib);
+      if (s) entry.senses.push(s);
+      sib = sib.nextElementSibling;
+    }
+    // Audio/picture paths in the fetched file are relative to lexicon/; re-root
+    // them onto this page's base and carry the entry's illustration across.
+    window.GACards.rebaseEntryMedia(entry, base);
+    var pic = window.GACards.mediaPath(window.GACards.pictureBefore(p), base);
+    return window.GACards.renderCard(entry, pic);
+  }
+
   // Fetch lexicon/<file>, extract the #id entry paragraph, render it as a card.
   // Returns a Promise<HTMLElement|null>.
   function loadEntry(base, file, id) {
     return fetch(base + 'lexicon/' + file)
       .then(function (r) { return r.text(); })
       .then(function (html) {
-        var doc = new DOMParser().parseFromString(html, 'text/html');
-        var span = doc.getElementById(id);
-        if (!span) return null;
-        var p = span.closest('p.lpLexEntryPara');
-        if (!p) return null;
-        var entry = window.GACards.parseEntry(p);
-        if (!entry) return null;
-        // Attach any following lpLexEntryPara2 continuation senses of this headword.
-        var sib = p.nextElementSibling;
-        while (sib && sib.classList && sib.classList.contains('lpLexEntryPara2')) {
-          var s = window.GACards.parseSense(sib);
-          if (s) entry.senses.push(s);
-          sib = sib.nextElementSibling;
-        }
-        // Audio/picture paths in the fetched file are relative to lexicon/; re-root
-        // them onto this page's base and carry the entry's illustration across.
-        window.GACards.rebaseEntryMedia(entry, base);
-        var pic = window.GACards.mediaPath(window.GACards.pictureBefore(p), base);
-        return window.GACards.renderCard(entry, pic);
+        return cardFromDoc(new DOMParser().parseFromString(html, 'text/html'), id, base);
       });
+  }
+
+  // Cards for a whole set of rows, in the order given. Rows are grouped by file
+  // first so each lexicon page is fetched once: a gloss group such as
+  // "a kind of tree" has 29 members spread over only 12 files, and fetching
+  // per-entry would issue 29 requests for the same 12 documents.
+  function loadEntries(base, rows) {
+    var byFile = {};
+    rows.forEach(function (r) { (byFile[r.file] = byFile[r.file] || []).push(r); });
+    var docs = {};
+    return Promise.all(Object.keys(byFile).map(function (f) {
+      return fetch(base + 'lexicon/' + f)
+        .then(function (r) { return r.text(); })
+        .then(function (html) { docs[f] = new DOMParser().parseFromString(html, 'text/html'); })
+        .catch(function () { docs[f] = null; });
+    })).then(function () {
+      return rows.map(function (r) {
+        return docs[r.file] ? cardFromDoc(docs[r.file], r.id, base) : null;
+      }).filter(Boolean);
+    });
   }
 
   // ---- helpers ----
@@ -77,6 +102,9 @@
     var pane = document.getElementById('pane');
     var scripts = cfg.scripts && cfg.scripts.length ? cfg.scripts : [{ key: 'native', label: 'A–Z', mode: 'native' }];
     var mode = scripts[0];
+    var groups = {};             // gloss -> member rows, for the group folders
+    var openTerm = null;         // which group folder is expanded in the list
+    var paneTerm = null;         // which group the entry pane currently holds
     var index = null;            // search-index.json
     var collation = null;        // { devGa:[], hindi:[] }
     var lexLetters = null;       // [{file,label}] for IPA grouping
@@ -92,41 +120,193 @@
       var f = readLS('ga.filter'), val = readLS('ga.filter.value');
       var ok = null;
       if (f && index) { ok = new Set(); index.forEach(function (e) { if (qualifies(e, f, val)) ok.add(e.id); }); }
-      Array.prototype.forEach.call(ilist.querySelectorAll('a'), function (a) {
+      // Only rows that stand for an entry are filterable; a group head has no id.
+      Array.prototype.forEach.call(ilist.querySelectorAll('a[data-id]'), function (a) {
         var keep = !f || (ok && ok.has(a.dataset.id));
         a.classList.toggle('ga-filtered-out', !keep);
       });
+      // A group's count badge always states how many members are actually
+      // reachable, so it never promises entries the filter has taken away.
+      Array.prototype.forEach.call(ilist.querySelectorAll('.group'), function (g) {
+        var vis = g.querySelectorAll('a.member:not(.ga-filtered-out):not(.ga-missing)').length;
+        g.classList.toggle('ga-filtered-out', vis === 0);
+        var c = g.querySelector('.count');
+        if (c) c.textContent = vis;
+      });
+    }
+
+    function markActive(id, file) {
+      Array.prototype.forEach.call(ilist.querySelectorAll('a'), function (a) {
+        a.classList.toggle('active', !!id && a.dataset.id === id && (!file || a.dataset.file === file));
+      });
+    }
+
+    // Expand one group folder and collapse the rest. The pane holds a single
+    // group at a time, so letting two folders stand open would leave the list
+    // claiming something the pane does not show.
+    function setOpen(term) {
+      openTerm = term;
+      Array.prototype.forEach.call(ilist.querySelectorAll('.group'), function (g) {
+        var on = g.dataset.term === term;
+        g.classList.toggle('open', on);
+        var h = g.querySelector('a.ghead');
+        if (h) h.setAttribute('aria-expanded', on ? 'true' : 'false');
+      });
+    }
+
+    // Scroll a card in the pane to sit under the sticky chrome, not behind it.
+    function focusCard(id) {
+      if (!id) return;
+      var card = pane.querySelector('[id="' + id + '"]');
+      if (!card) return;
+      var off = parseInt(getComputedStyle(document.documentElement)
+        .getPropertyValue('--chrome-top-lb'), 10) || 143;
+      var top = card.getBoundingClientRect().top + window.pageYOffset - off - 8;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      markActive(id);
     }
 
     function showEntry(file, id) {
-      Array.prototype.forEach.call(ilist.querySelectorAll('a'), function (a) {
-        a.classList.toggle('active', a.dataset.id === id && a.dataset.file === file);
-      });
+      paneTerm = null;
+      markActive(id, file);
       pane.innerHTML = '<div class="cards"></div>';
       var holder = pane.firstChild;
       loadEntry(base, file, id).then(function (card) {
-        if (card) holder.appendChild(card); else holder.innerHTML = '<p class="hint">Entry not found.</p>';
+        if (card) { holder.appendChild(card); window.GACards.applyFilter(holder); }
+        else holder.innerHTML = '<p class="hint">Entry not found.</p>';
       });
+      // Show the reader where this entry sits when it lives inside a folder.
+      var member = ilist.querySelector('a.member[data-id="' + id + '"]');
+      if (member) { var host = member.closest('.group'); if (host) setOpen(host.dataset.term); }
       try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; }
     }
 
-    function renderRows(rows) {
-      ilist.innerHTML = '';
-      rows.forEach(function (r) {
-        var a = document.createElement('a');
-        a.dataset.file = r.file; a.dataset.id = r.id;
+    // A gloss group is an ad-hoc category: every entry that shares this meaning,
+    // rendered together the way categories/ renders a category.
+    function showGroup(term, focusId) {
+      var members = groups[term] || [];
+      setOpen(term);
+      if (paneTerm === term) { focusCard(focusId); return; }
+      paneTerm = term;
+      markActive(focusId);
+      pane.innerHTML = '';
+      var wrap = document.createElement('div'); wrap.className = 'cards';
+      var head = document.createElement('p'); head.className = 'lpTitlePara';
+      head.textContent = term + ' \u2014 ' + members.length + ' entries';
+      wrap.appendChild(head);
+      pane.appendChild(wrap);
+      loadEntries(base, members).then(function (cards) {
+        cards.forEach(function (c) { wrap.appendChild(c); });
+        // Some index rows point at ids that no longer exist in lexicon/ — a
+        // pre-existing defect in the generated indexes. Opening a folder is the
+        // first moment we can know, so drop those rows and correct the badge
+        // rather than let the folder promise entries it cannot show.
+        reconcileGroup(term, cards);
+        window.GACards.applyFilter(wrap);
+        head.textContent = term + ' \u2014 ' + cards.length +
+          (cards.length === 1 ? ' entry' : ' entries');
+        focusCard(focusId);
+      });
+      // A group is not an entry, so it has no #eN to link to; drop a stale one.
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    }
+
+    // Hide member rows whose entry could not be resolved and restate the count.
+    function reconcileGroup(term, cards) {
+      var g = ilist.querySelector('.group[data-term="' + cssq(term) + '"]');
+      if (!g) return;
+      var got = {};
+      cards.forEach(function (c) { if (c && c.id) got[c.id] = 1; });
+      var dead = [];
+      Array.prototype.forEach.call(g.querySelectorAll('a.member'), function (m) {
+        if (!got[m.dataset.id]) { m.classList.add('ga-missing'); dead.push(m.dataset.file + '#' + m.dataset.id); }
+      });
+      if (dead.length) console.warn('browse.js: index rows with no entry in lexicon/:', dead.join(', '));
+      applyListFilter();
+    }
+
+    // Terms are arbitrary gloss text; escape the quote characters that would
+    // otherwise break out of an attribute selector.
+    function cssq(v) { return String(v).replace(/(["\\])/g, '\\$1'); }
+
+    function makeRow(r, cls) {
+      var a = document.createElement('a');
+      a.dataset.file = r.file; a.dataset.id = r.id;
+      if (cls) a.className = cls;
+      if (cls === 'member') {
+        // The gloss is already on the folder above; repeating it here would put
+        // back the very repetition the folder removes. The IPA headword is what
+        // tells one member from another.
+        var m = document.createElement('span'); m.className = 'ipa'; m.textContent = r.ipa;
+        a.appendChild(m);
+      } else {
         var t = document.createElement('span'); t.textContent = r.term;
         var ip = document.createElement('span'); ip.className = 'ipa'; ip.textContent = r.ipa;
         a.appendChild(t); a.appendChild(ip);
-        a.addEventListener('click', function (e) { e.preventDefault(); showEntry(r.file, r.id); });
-        ilist.appendChild(a);
+      }
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (cls === 'member') {
+          var host = a.closest('.group');
+          if (host) { showGroup(host.dataset.term, r.id); return; }
+        }
+        showEntry(r.file, r.id);
+      });
+      return a;
+    }
+
+    function makeGroupHead(term, n) {
+      var a = document.createElement('a');
+      a.className = 'ghead';
+      a.setAttribute('role', 'button');
+      a.setAttribute('aria-expanded', 'false');
+      var car = document.createElement('span'); car.className = 'caret'; car.setAttribute('aria-hidden', 'true');
+      var t = document.createElement('span'); t.className = 'gterm'; t.textContent = term;
+      var c = document.createElement('span'); c.className = 'count'; c.textContent = n;
+      a.appendChild(car); a.appendChild(t); a.appendChild(c);
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (openTerm === term && paneTerm === term) { setOpen(null); return; }
+        showGroup(term, null);
+      });
+      return a;
+    }
+
+    // grouped: fold rows sharing a term into one folder. Only ever true for a
+    // list whose term is a *gloss* (English, Hindi), where repetition means
+    // "many words, one meaning". A list of headword forms repeats for a
+    // different reason (homographs), and folding those would hide the very
+    // forms the reader is scanning.
+    function renderRows(rows, grouped) {
+      ilist.innerHTML = '';
+      groups = {}; openTerm = null;
+      if (!grouped) {
+        rows.forEach(function (r) { ilist.appendChild(makeRow(r)); });
+        applyListFilter();
+        return;
+      }
+      var order = [], byTerm = {};
+      rows.forEach(function (r) {
+        if (!byTerm[r.term]) { byTerm[r.term] = []; order.push(r.term); }
+        byTerm[r.term].push(r);
+      });
+      order.forEach(function (term) {
+        var members = byTerm[term];
+        if (members.length === 1) { ilist.appendChild(makeRow(members[0])); return; }
+        groups[term] = members;
+        var wrap = document.createElement('div');
+        wrap.className = 'group'; wrap.dataset.term = term;
+        wrap.appendChild(makeGroupHead(term, members.length));
+        members.forEach(function (m) { wrap.appendChild(makeRow(m, 'member')); });
+        ilist.appendChild(wrap);
       });
       applyListFilter();
     }
 
     // ----- native mode (existing per-letter tables) -----
     function loadNativeLetter(file) {
-      return fetch(file).then(function (r) { return r.text(); }).then(function (h) { renderRows(parseRows(h)); });
+      return fetch(file).then(function (r) { return r.text(); })
+        .then(function (h) { renderRows(parseRows(h), !!mode.group); });
     }
 
     // ----- alt mode (search-index driven) -----
@@ -146,7 +326,7 @@
       rows.sort(function (a, b) { return String(a[mode.sortKey] || '').localeCompare(String(b[mode.sortKey] || '')); });
       renderRows(rows.map(function (e) {
         return { term: e[mode.termField] || e.ipa, ipa: e.ipa, file: e.file, id: e.id };
-      }));
+      }), !!mode.group);
     }
 
     function buildToggle() {

@@ -82,27 +82,59 @@
   font-size:12px;padding:4px 12px;cursor:pointer;}
 .scriptseg button.active{background:var(--accent);color:#fff;}
 
-/* ---- two-pane index (term list + entry) ---- */
+/* ---- two-pane index (term list + entry) ----
+   Sidebar type is in rem for the same reason cards.css is (ADR 0001): a reader
+   who has enlarged text at the OS level should get a larger sidebar too. The
+   scale is recompressed, not multiplied — the sidebar is a *finding* surface
+   and the card beside it is a *reading* surface, so it stays deliberately
+   below the card's 1.25rem gloss. Widths, borders and the sticky offsets stay
+   in px so the chrome maths in chrome.js does not drift as text scales. */
 .layout{display:flex;}
 .idx{position:sticky;top:var(--chrome-top-lb,143px);align-self:flex-start;height:calc(100vh - var(--chrome-top-lb,143px));overflow:auto;
-  width:340px;border-right:1px solid #e7dcc2;background:var(--paper);}
-.idx .ttl{font-family:var(--serif);font-size:15px;color:var(--ink);padding:14px 16px 10px;border-bottom:1px solid #eadfc6;}
-.ilist a{display:flex;justify-content:space-between;gap:12px;padding:9px 16px;
-  border-bottom:1px solid #f0e7d3;color:var(--ink-soft);font-size:14px;align-items:baseline;cursor:pointer;text-decoration:none;}
+  width:380px;border-right:1px solid #e7dcc2;background:var(--paper);}
+.idx .ttl,.catlist .ttl{font-family:var(--serif);font-size:1.125rem;line-height:1.4;color:var(--ink);
+  padding:14px 18px 10px;border-bottom:1px solid #eadfc6;}
+.ilist a{display:flex;justify-content:space-between;gap:14px;padding:11px 18px;
+  border-bottom:1px solid #f0e7d3;color:var(--ink-soft);font-size:1.0625rem;line-height:1.45;
+  align-items:baseline;cursor:pointer;text-decoration:none;}
 .ilist a:hover{background:var(--paper-2);}
 .ilist a.active{background:#fff;box-shadow:inset 3px 0 0 var(--accent);color:var(--ink);}
-.ilist a.ga-filtered-out{display:none;}
-.ilist .ipa{font-family:var(--serif);color:var(--accent);font-size:15px;white-space:nowrap;}
+.ilist a.ga-filtered-out,.ilist .group.ga-filtered-out{display:none;}
+.ilist .ipa{font-family:var(--serif);color:var(--accent);font-size:1.0625rem;white-space:nowrap;}
+
+/* ---- gloss groups: one folder per gloss shared by more than one entry ----
+   Folded at 2+, uniformly. What the folder removes is not a wasted line but a
+   false repeat: without it the same gloss appears two or twenty-nine times and
+   the reader is left wondering which row is the real one. */
+.ilist .group{border-bottom:1px solid #f0e7d3;}
+.ilist .group a{border-bottom:none;}
+.ilist a.ghead{align-items:center;gap:10px;color:var(--ink);}
+.ilist a.ghead .gterm{flex:1;}
+.ilist a.ghead .caret{flex:0 0 auto;width:10px;color:var(--accent-soft);
+  border-left:6px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent;
+  height:0;transition:transform .15s;}
+.ilist .group.open a.ghead{background:var(--paper-2);color:var(--ink);}
+.ilist .group.open a.ghead .caret{transform:rotate(90deg);}
+/* The count sits in the column the single-row IPA occupies, so the right-hand
+   edge reads the same whether a row is one entry or a folder of them. */
+.ilist a.ghead .count{flex:0 0 auto;font-family:var(--serif);font-size:.875rem;color:var(--accent);
+  background:#fff;border:1px solid #ecdfc4;border-radius:999px;padding:1px 9px;min-width:1.5em;text-align:center;}
+.ilist .group:not(.open) a.member,.ilist a.member.ga-missing{display:none;}
+.ilist a.member{justify-content:flex-start;padding:9px 18px 9px 42px;background:#fdfaf2;}
+.ilist a.member .ipa{font-size:1.0625rem;}
+.ilist a.member.active{background:#fff;}
+
 .pane{flex:1;padding:0 24px;}
-.pane .hint{max-width:680px;margin:28px auto;color:var(--ink-mute);font-size:13px;text-align:center;}
+.pane .lpTitlePara{font-family:var(--serif);font-size:1.5rem;line-height:1.3;color:var(--ink);
+  text-align:center;margin:22px 0 18px;}
+.pane .hint{max-width:680px;margin:28px auto;color:var(--ink-mute);font-size:1rem;text-align:center;}
 .pane .cards{max-width:680px;margin:0 auto;padding-top:6px;}
 
 /* ---- categories left list ---- */
 .catlist{position:sticky;top:var(--chrome-top,99px);align-self:flex-start;height:calc(100vh - var(--chrome-top,99px));overflow:auto;
-  width:260px;border-right:1px solid #e7dcc2;background:var(--paper);padding:12px 0;}
-.catlist .ttl{font-family:var(--serif);font-size:14px;color:var(--ink-mute);padding:4px 18px 10px;
-  text-transform:uppercase;letter-spacing:.5px;}
-.catlist a{display:block;padding:7px 18px;color:var(--ink-soft);font-size:13px;border-left:3px solid transparent;cursor:pointer;text-decoration:none;}
+  width:300px;border-right:1px solid #e7dcc2;background:var(--paper);}
+.catlist a{display:block;padding:11px 18px;color:var(--ink-soft);font-size:1.0625rem;line-height:1.45;
+  border-left:3px solid transparent;cursor:pointer;text-decoration:none;}
 .catlist a:hover{background:var(--paper-2);}
 .catlist a.active{background:#fff;border-left-color:var(--accent);color:var(--ink);font-weight:600;}
 

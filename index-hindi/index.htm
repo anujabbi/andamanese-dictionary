@@ -20,7 +20,7 @@
 <script>
   document.addEventListener('ga:chromeready', function () {
     window.GABrowse.initIndexPage({ base: '../', section: 'hindi', scripts: [
-      { key: 'hi', label: 'अ–ह', mode: 'native' },
+      { key: 'hi', label: 'अ–ह', mode: 'native', group: true },
       { key: 'dev', label: 'देव', mode: 'alt', requires: 'hi', termField: 'hi', groupBy: 'deva', order: 'devGa', sortKey: 'deva' }
     ]});
   });

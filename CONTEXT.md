@@ -36,6 +36,25 @@ siblings, not original-and-translation. Neither is authoritative over the other.
 "Translation" is not used in this project: it implies a source and a target,
 and these glosses have neither.
 
+## Gloss group
+
+A set of entries that share one gloss. "Many words, one meaning" — 113 Great
+Andamanese words are all glossed *fish* in English.
+
+The members of a gloss group are **not duplicates**. Calling them that implies
+one of them is redundant; none is. What repeats is the gloss, and the gloss is
+the *reader's* word, not the language's.
+
+A gloss group is not the same thing as a **Category**: a category is authored
+and resolves to a page, while a gloss group exists only because two entries
+happen to mean the same thing in English or Hindi. Groups are derived, not
+declared.
+
+Distinguish from a **homograph set**: entries that share a *headword form*
+rather than a meaning. Two words spelled the same are not two words meaning the
+same, and the two must not be presented alike — see
+[[reverse-index-grouping]] (docs/adr/0002).
+
 ## Sense
 
 A distinct meaning of the same headword. An entry with more than one sense
