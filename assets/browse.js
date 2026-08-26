@@ -231,8 +231,11 @@
     var catlist = document.getElementById('catlist');
     var pane = document.getElementById('pane');
     var curCards = null;
+    var catByFile = {};          // cNNN.htm -> display name, filled once the list loads
+    var curFile = null;
 
     function showCategory(file, name) {
+      curFile = file;
       Array.prototype.forEach.call(catlist.querySelectorAll('a'), function (a) {
         a.classList.toggle('active', a.dataset.file === file);
       });
@@ -269,6 +272,7 @@
     // replaces it with that single entry's card. Picking a category again in
     // the left-hand list restores the full listing.
     function showSingleEntry(file, id) {
+      curFile = null;
       Array.prototype.forEach.call(catlist.querySelectorAll('a'), function (a) { a.classList.remove('active'); });
       pane.innerHTML = '';
       var wrap = document.createElement('div'); wrap.className = 'cards';
@@ -285,6 +289,7 @@
 
     fetch(base + 'assets/category-list.json').then(function (r) { return r.json(); }).then(function (list) {
       list.forEach(function (c) {
+        catByFile[c.file] = c.name;
         var a = document.createElement('a');
         a.dataset.file = c.file; a.textContent = c.name;
         a.addEventListener('click', function (e) { e.preventDefault(); showCategory(c.file, c.name); });
@@ -303,6 +308,26 @@
       var initial = list.filter(function (c) { return c.file === hash; })[0] || list[0];
       if (initial) showCategory(initial.file, initial.name);
     }).catch(function (e) { console.warn('browse.js: category list failed', e); });
+
+    // A category tag inside the pane points at categories/index.htm#cNNN.htm —
+    // i.e. this very page. Following the href would only move the hash, which
+    // never re-renders, so swap the pane in place instead.
+    pane.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a.cat[href]');
+      if (!a) return;
+      var m = /#(c\d+\.htm)$/.exec(a.getAttribute('href') || '');
+      if (!m) return;
+      e.preventDefault();
+      showCategory(m[1], catByFile[m[1]] || a.dataset.cat || m[1]);
+      pane.scrollTop = 0;
+    });
+
+    // Back/forward between categories (showCategory uses replaceState, so this
+    // only fires for real history navigation, never for our own updates).
+    window.addEventListener('hashchange', function () {
+      var h = (location.hash || '').replace('#', '');
+      if (/^c\d+\.htm$/.test(h) && h !== curFile) showCategory(h, catByFile[h] || h);
+    });
 
     document.addEventListener('ga:filterchange', function () { if (curCards) window.GACards.applyFilter(curCards); });
   }
