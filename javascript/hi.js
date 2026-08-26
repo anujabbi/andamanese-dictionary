@@ -52,8 +52,11 @@ function fragHLlink() {
     if (document.getElementsByTagName) {
 	var an = document.getElementsByTagName('a');
 	for (i=0; i<an.length; i++) {
-	    if (an.item(i).getAttribute('href').indexOf('#') >= 0) {
-		var fragment = an.item(i).getAttribute('href').substring(an.item(i).getAttribute('href').indexOf('#') + 1);
+	    /* Anchors without an href exist on the modern pages (a category chip
+	       is rendered before assets/category-list.json resolves), so guard. */
+	    var href = an.item(i).getAttribute('href');
+	    if (href && href.indexOf('#') >= 0) {
+		var fragment = href.substring(href.indexOf('#') + 1);
 		if (fragExclude.search(fragment)) {
 		    var evn = "fragHL('" + fragment + "')";
 		    var fun = new Function('e',evn);

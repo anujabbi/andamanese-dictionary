@@ -480,6 +480,18 @@
     // search picked. fn(file, id) returns true when it handled the entry;
     // anything falsy makes the search navigate into lexicon/ instead.
     registerEntryShower: registerEntryShower,
+    // Cross-reference hooks: the Etym / Environmental tags on a card drive the
+    // same Show filter the pill bar owns, so clicking one narrows the view.
+    // Both toggle: clicking the tag that is already active clears the filter.
+    setEtymSource: function (src) {
+      var on = readLS('ga.filter') === 'etym' && readLS('ga.filter.value') === src;
+      if (on) selectFacet('');
+      else pickSource(src || '');
+    },
+    setFilter: function (val) {
+      if (val !== 'morph' && val !== 'env') return;
+      selectFacet(readLS('ga.filter') === val ? '' : val);
+    },
   };
 
   function firstLetterIn(text, set) {

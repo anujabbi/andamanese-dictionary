@@ -252,6 +252,114 @@
     return entry;
   }
 
+  // ---------- Category cross-references ----------
+
+  // Every <span class="lpCategory"> string in the lexicon matches exactly one
+  // `name` in assets/category-list.json (62 English categories + their 62
+  // Hindi equivalents, c001–c124), so a tag can be turned into a link to that
+  // category's listing with a plain lookup — no fuzzy matching.
+  var CAT_MAP = null;
+
+  function pageBase() {
+    return (window.GA_PAGE && typeof window.GA_PAGE.base === 'string')
+      ? window.GA_PAGE.base
+      : '../';   // every entry-rendering page sits one level below the repo root
+  }
+
+  function catHref(name) {
+    var file = CAT_MAP && CAT_MAP[name];
+    return file ? pageBase() + 'categories/index.htm#' + file : null;
+  }
+
+  // Chips are rendered as <a> whether or not the map has arrived yet; the ones
+  // built before it loads get their href filled in by upgradeCatLinks(). An <a>
+  // without an href is inert, so a failed fetch degrades to today's plain tag.
+  function renderCatChip(name) {
+    var a = el('a', 'cat', name);
+    a.dataset.cat = name;
+    var href = catHref(name);
+    if (href) {
+      a.href = href;
+      a.title = 'Browse the "' + name + '" category';
+    }
+    return a;
+  }
+
+  function upgradeCatLinks() {
+    var chips = document.querySelectorAll('a.cat[data-cat]:not([href])');
+    Array.prototype.forEach.call(chips, function (a) {
+      var href = catHref(a.dataset.cat);
+      if (href) { a.href = href; a.title = 'Browse the "' + a.dataset.cat + '" category'; }
+    });
+  }
+
+  function loadCategoryMap() {
+    if (CAT_MAP) return;
+    fetch(pageBase() + 'assets/category-list.json')
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        CAT_MAP = {};
+        list.forEach(function (c) { CAT_MAP[c.name] = c.file; });
+        upgradeCatLinks();
+      })
+      .catch(function (e) { console.warn('cards.js: category list failed', e); });
+  }
+
+  // ---------- Filter cross-references ----------
+
+  // The Etym and Environmental tags point at the header's Show filter rather
+  // than at a page: clicking one narrows the current view to entries sharing
+  // that etymology source / to the environmental lexicon.
+  // The standalone category pages load cards.js without chrome.js, so there is
+  // no Show filter to drive — there, both tags stay plain text. window.GA_PAGE
+  // is the marker to test, not window.GAChrome: deferred scripts run with
+  // readyState already 'interactive', so cards.js renders before chrome.js has
+  // executed, but the inline GA_PAGE assignment has always run by then.
+  function hasFilterBar() {
+    return !!window.GA_PAGE;
+  }
+
+  function renderEtymTag(value) {
+    var src = etymSource(value);
+    if (!src || !hasFilterBar()) return el('span', 'etym', value);
+    var b = el('button', 'etym etym-link', value);
+    b.type = 'button';
+    b.dataset.etymSource = src;
+    b.title = 'Show only entries from ' + src;
+    return b;
+  }
+
+  function renderEnvTag() {
+    if (!hasFilterBar()) return el('span', 'env-tag', 'Environmental');
+    var b = el('button', 'env-tag env-link', 'Environmental');
+    b.type = 'button';
+    b.dataset.setFilter = 'env';
+    b.title = 'Show only environmental-lexicon entries';
+    return b;
+  }
+
+  // Delegated on `document` for the same reason as the audio handler: cards are
+  // rendered into panes long after this runs.
+  function installFilterLinks(root) {
+    root.addEventListener('click', function (e) {
+      var etym = e.target.closest('[data-etym-source]');
+      if (etym) {
+        e.preventDefault();
+        if (window.GAChrome && window.GAChrome.setEtymSource) {
+          window.GAChrome.setEtymSource(etym.dataset.etymSource);
+        }
+        return;
+      }
+      var f = e.target.closest('[data-set-filter]');
+      if (f) {
+        e.preventDefault();
+        if (window.GAChrome && window.GAChrome.setFilter) {
+          window.GAChrome.setFilter(f.dataset.setFilter);
+        }
+      }
+    });
+  }
+
   // ---------- Rendering ----------
 
   function el(tag, className, text) {
@@ -318,7 +426,7 @@
     if (s.refs && s.refs.length) blk.appendChild(renderRefs(s.refs));
     if (s.categories && s.categories.length) {
       const cats = el('div', 'cats');
-      for (const c of s.categories) cats.appendChild(el('span', 'cat', c));
+      for (const c of s.categories) cats.appendChild(renderCatChip(c));
       blk.appendChild(cats);
     }
     return blk;
@@ -361,7 +469,7 @@
       const meta = el('div', 'meta-line');
       for (const [lbl, val, cls] of metaItems) {
         meta.appendChild(el('span', 'lbl', lbl));
-        meta.appendChild(el('span', cls, val));
+        meta.appendChild(cls === 'etym' ? renderEtymTag(val) : el('span', cls, val));
       }
       body.appendChild(meta);
     }
@@ -378,8 +486,8 @@
     // Categories
     if (entry.categories.length || entry.env) {
       const cats = el('div', 'cats');
-      if (entry.env) cats.appendChild(el('span', 'env-tag', 'Environmental'));
-      for (const c of entry.categories) cats.appendChild(el('span', 'cat', c));
+      if (entry.env) cats.appendChild(renderEnvTag());
+      for (const c of entry.categories) cats.appendChild(renderCatChip(c));
       body.appendChild(cats);
     }
 
@@ -560,7 +668,9 @@
   function init() {
     transformPage();
     installAudioHandler(document);
+    installFilterLinks(document);
     installLightbox();
+    loadCategoryMap();
   }
 
   if (document.readyState === 'loading') {
